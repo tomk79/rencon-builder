@@ -6,8 +6,14 @@ class writer {
 	/** $utils */
 	private $utils;
 
-	/** $path_dist */
-	private $path_dist;
+	/** $renconBuilderJson */
+	private $renconBuilderJson;
+
+	/** version */
+	private $version;
+
+	/** appname */
+	private $appname;
 
 	/** $require_files */
 	private $require_files;
@@ -18,13 +24,27 @@ class writer {
 	/**
 	 * Constructor
 	 */
-	public function __construct( $utils, $path_dist ){
+	public function __construct( $utils, $renconBuilderJson ){
 		$this->utils = $utils;
-		$this->path_dist = $path_dist;
+		$this->renconBuilderJson = $renconBuilderJson;
 		$this->require_files = array();
 		$this->resource_files = array();
 	}
 
+
+	/**
+	 * バージョン番号をセット
+	 */
+	public function set_version($version){
+		$this->version = $version;
+	}
+
+	/**
+	 * アプリケーション名をセット
+	 */
+	public function set_appname($appname){
+		$this->appname = $appname;
+	}
 
 	/**
 	 * スキャン済みのパッケージか調べる
@@ -67,11 +87,32 @@ class writer {
 	 * 保存する
 	 */
 	public function save(){
+		$framework_files = new framework_files();
+
 		$rtn = '';
-		$rtn .= '<'.'?php'."\n";
-		$rtn .= 'namespace app;'."\n";
-		$rtn .= "\n";
-		$rtn .= '?'.'>';
+
+		$src_function_resource = '';
+		foreach( $this->resource_files as $file ){
+			$bin = file_get_contents($file);
+			$src_function_resource .= ''.var_export($file, true).' => '.var_export(base64_encode( $bin ), true).','."\n";
+		}
+
+
+		$src_route = '';
+		if( $this->renconBuilderJson->route ){
+			foreach( $this->renconBuilderJson->route as $route => $func_name ){
+				$src_route .= ''.var_export($route, true).' => '.var_export($func_name, true).','."\n";
+			}
+
+		}
+
+
+		$framework = $framework_files->get_framework();
+		$framework = str_replace('<!-- appname -->', $this->appname.' v'.$this->version, $framework);
+		$framework = str_replace('/* router */', $src_route, $framework);
+		$framework = str_replace('/* function resource() */', $src_function_resource, $framework);
+
+		$rtn .= $framework;
 
 		foreach( $this->require_files as $package_name => $files ){
 			foreach( $files as $file ){
@@ -85,16 +126,7 @@ class writer {
 			}
 		}
 
-		$rtn .= '<'.'?php'."\n";
-		$rtn .= '$resources = array('."\n";
-		foreach( $this->resource_files as $file ){
-			$bin = file_get_contents($file);
-			$rtn .= '	'.var_export($file, true).' = '.var_export(base64_encode( $bin ), true).','."\n";
-		}
-		$rtn .= ');'."\n";
-		$rtn .= '?'.'>';
-
-		return $this->utils->fs()->save_file( $this->path_dist, $rtn );
+		return $this->utils->fs()->save_file( $this->renconBuilderJson->dist, $rtn );
 	}
 
 }

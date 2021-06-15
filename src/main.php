@@ -52,7 +52,9 @@ class main {
 		}
 
 
-		$this->writer = new writer($this->utils, $renconBuilderJson->dist);
+		$this->writer = new writer($this->utils, $renconBuilderJson);
+		$this->writer->set_version( $this->version );
+		$this->writer->set_appname( $composerJson->name );
 
 
 
@@ -106,6 +108,9 @@ class main {
 		}
 		if( !property_exists( $json, 'resources' ) ){
 			$json->resources = false;
+		}
+		if( !property_exists( $json, 'route' ) ){
+			$json->route = false;
 		}
 		return $json;
 	}

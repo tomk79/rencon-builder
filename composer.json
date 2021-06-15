@@ -12,6 +12,7 @@
     ],
     "scripts":{
         "build": [
+            "php ./build/build.php",
             "php ./box.phar build"
         ],
         "test": [

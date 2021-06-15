@@ -1,4 +1,14 @@
 {
     "dist": "dist/app01.php",
-    "resources": "resources/"
+    "resources": "resources/",
+    "route": {
+        "": {
+            "title": "Home",
+            "page": "app01\\main"
+        },
+        "test": {
+            "title": "Test",
+            "page": "app01\\test"
+        }
+    }
 }

@@ -52,7 +52,12 @@ class framework {
 		}
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
+			ob_start();
 			call_user_func($controller->page);
+			$contents = ob_get_clean();
+			$html = $this->theme( $contents );
+			echo $html;
+
 		}
 		exit();
 	}
@@ -98,6 +103,16 @@ class framework {
 				break;
 		}
 		return $mimetype;
+	}
+
+
+	public function theme( $contents ){
+		ob_start();
+?>
+/* theme template */
+<?php
+		$html = ob_get_clean();
+		return $html;
 	}
 
 }

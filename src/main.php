@@ -112,6 +112,9 @@ class main {
 		if( !property_exists( $json, 'route' ) ){
 			$json->route = false;
 		}
+		if( !property_exists( $json, 'theme' ) ){
+			$json->theme = false;
+		}
 		return $json;
 	}
 

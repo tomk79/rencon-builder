@@ -116,10 +116,15 @@ class writer {
 
 		}
 
+		$src_theme = '';
+		if( $this->renconBuilderJson->theme ){
+			$src_theme .= file_get_contents( $this->renconBuilderJson->theme );
+		}
 
 		$framework = $framework_files->get_framework();
 		$framework = str_replace('<!-- appname -->', $this->appname.' v'.$this->version, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
+		$framework = str_replace('/* theme template */', $src_theme, $framework);
 		$framework = str_replace('/* function resource() */', $src_function_resource, $framework);
 
 		$rtn .= $framework;

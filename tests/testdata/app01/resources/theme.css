@@ -1,0 +1,13 @@
+html, body {
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+img {
+    max-width: 100%;
+}
+.theme-middle {
+    margin: 0 auto;
+    max-width: 600px;
+    width: calc(100% - 40px);
+}

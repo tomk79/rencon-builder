@@ -10,5 +10,6 @@
             "title": "Test",
             "page": "app01\\test::start"
         }
-    }
+    },
+    "theme": "app/theme/theme.php"
 }

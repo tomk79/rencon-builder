@@ -12,6 +12,9 @@ class writer {
 	/** $require_files */
 	private $require_files;
 
+	/** $resource_files */
+	private $resource_files;
+
 	/**
 	 * Constructor
 	 */
@@ -19,6 +22,7 @@ class writer {
 		$this->utils = $utils;
 		$this->path_dist = $path_dist;
 		$this->require_files = array();
+		$this->resource_files = array();
 	}
 
 
@@ -55,6 +59,7 @@ class writer {
 	 * リソースファイルを加える
 	 */
 	public function resource( $realpath ){
+		array_push( $this->resource_files, $realpath );
 		return true;
 	}
 
@@ -64,6 +69,8 @@ class writer {
 	public function save(){
 		$rtn = '';
 		$rtn .= '<'.'?php'."\n";
+		$rtn .= 'namespace app;'."\n";
+		$rtn .= "\n";
 		$rtn .= '?'.'>';
 
 		foreach( $this->require_files as $package_name => $files ){
@@ -77,6 +84,15 @@ class writer {
 				$rtn .= $bin;
 			}
 		}
+
+		$rtn .= '<'.'?php'."\n";
+		$rtn .= '$resources = array('."\n";
+		foreach( $this->resource_files as $file ){
+			$bin = file_get_contents($file);
+			$rtn .= '	'.var_export($file, true).' = '.var_export(base64_encode( $bin ), true).','."\n";
+		}
+		$rtn .= ');'."\n";
+		$rtn .= '?'.'>';
 
 		return $this->utils->fs()->save_file( $this->path_dist, $rtn );
 	}

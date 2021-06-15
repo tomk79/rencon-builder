@@ -62,8 +62,25 @@ class main {
 		$dependencies = new dependencies($this->utils, $this->writer);
 		$dependencies->scan();
 
-		$this->writer->save();
+		echo ''."\n";
+		echo ''."\n";
 
+		echo '--------------------------------------'."\n";
+		echo 'scaning resources'."\n";
+		$resources = new resources($this->utils, $this->writer);
+		$resources->scan( $renconBuilderJson->resources );
+
+
+		echo ''."\n";
+		echo ''."\n";
+		echo ''."\n";
+
+		echo 'saving files...';
+		$this->writer->save();
+		echo 'done.'."\n";
+
+		echo ''."\n";
+		echo ''."\n";
 		echo ''."\n";
 		echo 'done.'."\n";
 
@@ -86,6 +103,9 @@ class main {
 	private function normalize_rencon_builder_json( $json ){
 		if( !property_exists( $json, 'dist' ) ){
 			$json->dist = false;
+		}
+		if( !property_exists( $json, 'resources' ) ){
+			$json->resources = false;
 		}
 		return $json;
 	}

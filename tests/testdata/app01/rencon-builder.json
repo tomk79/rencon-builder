@@ -1,3 +1,4 @@
 {
-    "dist": "dist/app01.phar"
+    "dist": "dist/app01.php",
+    "resources": "resources/"
 }

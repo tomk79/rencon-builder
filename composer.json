@@ -25,5 +25,8 @@
     "require": {
         "tomk79/filesystem": "^1.0",
         "tomk79/request": "^1.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~9.5"
     }
 }

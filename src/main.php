@@ -26,7 +26,7 @@ class main {
 	public function start(){
 
 		echo "\n";
-		echo '-------------------'."\n";
+		echo '--------------------------------------'."\n";
 		echo 'rencon-builder v'.$this->version."\n";
 		echo "\n";
 
@@ -53,8 +53,18 @@ class main {
 
 
 		$this->writer = new writer($this->utils, $renconBuilderJson->dist);
+
+
+
+		echo ''."\n";
+		echo '--------------------------------------'."\n";
+		echo 'scaning dependencies'."\n";
+		$dependencies = new dependencies($this->utils, $this->writer);
+		$dependencies->scan();
+
 		$this->writer->save();
 
+		echo ''."\n";
 		echo 'done.'."\n";
 
 		return;

@@ -4,11 +4,11 @@
     "route": {
         "": {
             "title": "Home",
-            "page": "app01\\main"
+            "page": "app/pages/index.php"
         },
         "test": {
             "title": "Test",
-            "page": "app01\\test"
+            "page": "app01\\test::start"
         }
     }
 }

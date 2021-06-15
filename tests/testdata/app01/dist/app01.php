@@ -32,12 +32,18 @@ class framework {
 		$route = array(
 
 '' => (object) array(
-   'title' => 'Home',
-   'page' => 'app01\\main',
+	"title" => 'Home',
+	"page" => function(){ ?>
+<p>トップページ</p>
+
+<p><?php
+var_dump( $_REQUEST );
+?></p>
+<?php return; },
 ),
 'test' => (object) array(
-   'title' => 'Test',
-   'page' => 'app01\\test',
+	"title" => 'Test',
+	"page" => 'app01\\test::start',
 ),
 
 
@@ -59,12 +65,8 @@ class framework {
 		}
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
+			call_user_func($controller->page);
 		}
-		echo 'starting app'."\n";
-		echo '$action = '.$action."\n";
-		echo '$resource = '.$resource."\n";
-
-		var_dump( $controller );
 		exit();
 	}
 
@@ -86,9 +88,9 @@ class framework {
 
 namespace app01;
 
-class main {
-    public function start(){
-        echo "main::start()"."\n";
+class test {
+    static public function start(){
+        echo "test::start()"."\n";
         return;
     }
 }

@@ -51,12 +51,8 @@ class framework {
 		}
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
+			call_user_func($controller->page);
 		}
-		echo 'starting app'."\n";
-		echo '$action = '.$action."\n";
-		echo '$resource = '.$resource."\n";
-
-		var_dump( $controller );
 		exit();
 	}
 

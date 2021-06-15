@@ -83,6 +83,7 @@ class writer {
 		return true;
 	}
 
+
 	/**
 	 * 保存する
 	 */
@@ -101,7 +102,16 @@ class writer {
 		$src_route = '';
 		if( $this->renconBuilderJson->route ){
 			foreach( $this->renconBuilderJson->route as $route => $func_name ){
-				$src_route .= ''.var_export($route, true).' => '.var_export($func_name, true).','."\n";
+				$src_route .= ''.var_export($route, true).' => (object) array('."\n";
+				$src_route .= '	"title" => '.var_export($func_name->title, true).','."\n";
+				if( is_file( $func_name->page ) ){
+					$src_route .= '	"page" => function(){ ?'.'>'."\n";
+					$src_route .= file_get_contents( $func_name->page );
+					$src_route .= '<'.'?php return; },'."\n";
+				}else{
+					$src_route .= '	"page" => '.var_export($func_name->page, true).','."\n";
+				}
+				$src_route .= '),'."\n";
 			}
 
 		}

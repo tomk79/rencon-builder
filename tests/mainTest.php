@@ -20,8 +20,8 @@ class mainTest extends PHPUnit\Framework\TestCase{
 		$cd = realpath('.');
 		chdir(__DIR__.'/testdata/app01/');
 
-		$stdout = exec( $realpath_rencon_builder );
-		var_dump($stdout);
+		exec( $realpath_rencon_builder, $stdout );
+		var_dump( implode("\n", $stdout) );
 
 		$this->assertEquals( 1, 1 );
 

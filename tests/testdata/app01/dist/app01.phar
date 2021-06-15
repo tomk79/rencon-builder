@@ -1,22 +1,2 @@
-object(stdClass)#8 (2) {
-  ["require"]=>
-  object(stdClass)#7 (1) {
-    ["tomk79/filesystem"]=>
-    string(1) "*"
-  }
-  ["autoload"]=>
-  object(stdClass)#10 (1) {
-    ["psr-4"]=>
-    object(stdClass)#9 (1) {
-      ["app01\"]=>
-      array(1) {
-        [0]=>
-        string(3) "src"
-      }
-    }
-  }
-}
-object(stdClass)#11 (1) {
-  ["dist"]=>
-  string(15) "dist/app01.phar"
-}
+<?php
+?>

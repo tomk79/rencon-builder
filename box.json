@@ -3,7 +3,7 @@
         "src",
         "vendor"
     ],
-    "main": "src/main.php",
+    "main": "rencon-builder.php",
     "output": "rencon-builder.phar",
     "chmod": "0755",
     "stub": true

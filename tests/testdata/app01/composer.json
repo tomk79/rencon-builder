@@ -1,0 +1,12 @@
+{
+    "require": {
+        "tomk79/filesystem": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "app01\\": [
+                "src"
+            ]
+        }
+    }
+}

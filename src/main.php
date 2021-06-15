@@ -69,8 +69,8 @@ class main {
 
 		echo '--------------------------------------'."\n";
 		echo 'scaning resources'."\n";
-		$resources = new resources($this->utils, $this->writer);
-		$resources->scan( $renconBuilderJson->resources );
+		$resources = new resources($this->utils, $this->writer, $renconBuilderJson);
+		$resources->scan();
 
 
 		echo ''."\n";

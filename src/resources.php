@@ -12,19 +12,24 @@ class resources {
 	/** $package_name */
 	private $package_name;
 
+	/** $renconBuilderJson */
+	private $renconBuilderJson;
+
 	/**
 	 * Constructor
 	 */
-	public function __construct( $utils, $writer ){
+	public function __construct( $utils, $writer, $renconBuilderJson ){
 		$this->utils = $utils;
 		$this->writer = $writer;
+		$this->renconBuilderJson = $renconBuilderJson;
 	}
 
 
 	/**
 	 * 走査を始める
 	 */
-	public function scan( $basedir ){
+	public function scan( $localdir = null ){
+		$basedir = $this->renconBuilderJson->resources;
 
 		if( !$basedir ){
 			return false;
@@ -34,12 +39,12 @@ class resources {
 		}
 
 
-		$ls = $this->utils->fs()->ls( $basedir );
+		$ls = $this->utils->fs()->ls( $basedir.$localdir );
 		foreach( $ls as $basename ){
-			if( is_file( $basedir.$basename ) ){
-				$this->writer->resource( $basedir.$basename );
-			}elseif( is_dir( $basedir.$basename ) ){
-				$this->scan( $basedir.$basename );
+			if( is_file( $basedir.$localdir.$basename ) ){
+				$this->writer->resource( $localdir.$basename );
+			}elseif( is_dir( $basedir.$localdir.$basename ) ){
+				$this->scan( $localdir.$basename.'/' );
 			}
 		}
 		return;

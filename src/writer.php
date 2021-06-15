@@ -94,7 +94,7 @@ class writer {
 
 		$src_function_resource = '';
 		foreach( $this->resource_files as $file ){
-			$bin = file_get_contents($file);
+			$bin = file_get_contents($this->renconBuilderJson->resources.'/'.$file);
 			$src_function_resource .= ''.var_export($file, true).' => '.var_export(base64_encode( $bin ), true).','."\n";
 		}
 

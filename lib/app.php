@@ -48,6 +48,11 @@ class app {
 		$action = $this->req->get_param('a');
 		$resource = $this->req->get_param('res');
 		$controller = null;
+		$app_info = array(
+			'id' => $this->app_id,
+			'name' => $this->app_name,
+			'pages' => $route,
+		);
 
 		if( strlen($resource) ){
 			header("Content-type: ".$this->resources->get_mime_type($resource));
@@ -59,7 +64,7 @@ class app {
 
 		header('Content-type: text/html'); // default
 
-		$login = new login($this);
+		$login = new login($this, $app_info);
 		if( !$login->check() ){
 			$login->please_login();
 			exit;
@@ -80,11 +85,6 @@ class app {
 			$page_info = array(
 				'id' => $action,
 				'title' => $controller->title,
-			);
-			$app_info = array(
-				'id' => $this->app_id,
-				'name' => $this->app_name,
-				'pages' => $route,
 			);
 
 			$theme = new theme( $this, $login, $app_info, $page_info );

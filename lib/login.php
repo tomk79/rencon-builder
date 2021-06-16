@@ -9,12 +9,14 @@ namespace renconFramework;
 class login{
 	private $main;
 	private $app_id = '<!-- app_id -->';
+	private $app_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main ){
+	public function __construct( $main, $app_info ){
 		$this->main = $main;
+		$this->app_info = (object) $app_info;
 	}
 
 	/**
@@ -70,15 +72,12 @@ class login{
 <html>
 	<head>
 		<meta charset="UTF-8" />
-		<title>rencon</title>
+		<title><?= htmlspecialchars( $this->app_info->name ) ?></title>
 		<meta name="robots" content="nofollow, noindex, noarchive" />
-		<link rel="stylesheet" href="?res=bootstrap4/css/bootstrap.min.css" />
-		<script src="?res=bootstrap4/js/bootstrap.min.js"></script>
-		<link rel="stylesheet" href="?res=styles/common.css" />
 	</head>
 	<body>
 		<div class="container">
-			<h1>rencon</h1>
+			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
 			<?php if( strlen($this->main->req()->get_param('login_try')) ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div>IDまたはパスワードが違います。</div>
@@ -115,15 +114,12 @@ PW: <input type="password" name="login_pw" value="" class="form-element" />
 <html>
 	<head>
 		<meta charset="UTF-8" />
-		<title>rencon</title>
+		<title><?= htmlspecialchars( $this->app_info->name ) ?></title>
 		<meta name="robots" content="nofollow, noindex, noarchive" />
-		<link rel="stylesheet" href="?res=bootstrap4/css/bootstrap.min.css" />
-		<script src="?res=bootstrap4/js/bootstrap.min.js"></script>
-		<link rel="stylesheet" href="?res=styles/common.css" />
 	</head>
 	<body>
 		<div class="container">
-			<h1>rencon</h1>
+			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
 			<p>Logged out.</p>
 			<p><a href="?">Back to Home</a></p>
 		</div>

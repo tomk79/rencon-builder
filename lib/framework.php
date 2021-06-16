@@ -38,12 +38,14 @@ class framework {
 	private $fs;
 	private $req;
 	private $resources;
+	private $theme;
 
 	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->resources = new resources($this);
+		$this->theme = new theme($this);
 	}
 
 	public function conf(){ return $this->conf; }
@@ -96,7 +98,7 @@ class framework {
 	}
 
 
-	public function theme( $contents ){
+	public function theme( $content ){
 		ob_start();
 ?>/* theme template */<?php
 		$html = ob_get_clean();

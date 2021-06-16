@@ -12,7 +12,7 @@
 <div class="theme-middle">
 <h1></h1>
 <div class="contents">
-<?= $contents ?>
+<?= $content ?>
 </div>
 </div>
 

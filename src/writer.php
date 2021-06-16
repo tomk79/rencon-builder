@@ -126,17 +126,18 @@ class writer {
 
 		}
 
-		$src_theme = '';
+		$src_template = '';
 		if( $this->renconBuilderJson->theme ){
-			$src_theme .= file_get_contents( $this->renconBuilderJson->theme );
+			$src_template .= file_get_contents( $this->renconBuilderJson->theme );
 		}
+
 
 		$framework = $framework_files->get('framework');
 		$framework = str_replace('<!-- appname -->', $this->appname, $framework);
 		$framework = str_replace('<!-- app_id -->', $this->app_id, $framework);
 		$framework = str_replace('<!-- version -->', $this->version, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
-		$framework = str_replace('/* theme template */', $src_theme, $framework);
+		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;
 
 
@@ -144,8 +145,12 @@ class writer {
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
 
+		$src_theme .= $framework_files->get('theme');
+		$src_theme = str_replace('/* theme template */', $src_template, $src_theme);
+		$rtn .= $src_theme;
 
-		$src_login .= $framework_files->get('login');
+
+		$src_login = $framework_files->get('login');
 		$src_login = str_replace('<!-- appname -->', $this->appname, $src_login);
 		$src_login = str_replace('<!-- app_id -->', $this->app_id, $src_login);
 		$rtn .= $src_login;

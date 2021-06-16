@@ -38,12 +38,14 @@ class framework {
 	private $fs;
 	private $req;
 	private $resources;
+	private $theme;
 
 	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->resources = new resources($this);
+		$this->theme = new theme($this);
 	}
 
 	public function conf(){ return $this->conf; }
@@ -115,7 +117,7 @@ var_dump( $_REQUEST );
 	}
 
 
-	public function theme( $contents ){
+	public function theme( $content ){
 		ob_start();
 ?><!DOCTYPE html>
 <html>
@@ -131,7 +133,7 @@ var_dump( $_REQUEST );
 <div class="theme-middle">
 <h1></h1>
 <div class="contents">
-<?= $contents ?>
+<?= $content ?>
 </div>
 </div>
 
@@ -2133,6 +2135,69 @@ class request{
 		return $rtn;
 	}//get_path_current_dir()
 
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * rencon theme class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class theme{
+	private $main;
+	private $h1 = 'Home';
+
+	/**
+	 * Constructor
+	 */
+	public function __construct( $main ){
+		$this->main = $main;
+	}
+
+	/**
+	 * h1テキストを登録
+	 */
+	public function set_h1( $h1 ){
+		$this->h1 = $h1;
+		return true;
+	}
+
+	/**
+	 * テーマにコンテンツを包んで返す
+	 */
+	public function bind( $content ){
+		$action_ary = explode('.', $this->main->req()->get_param('a'));
+		if( !is_array($action_ary) || !count($action_ary) ){
+			$action_ary[0] = '';
+		}
+		$class_active['active'] = $action_ary[0];
+		ob_start();
+		?><!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title></title>
+<link rel="stylesheet" href="?res=theme.css" />
+</head>
+<body>
+
+
+<hr />
+<div class="theme-middle">
+<h1></h1>
+<div class="contents">
+<?= $content ?>
+</div>
+</div>
+
+<script src="?res=theme.js"></script>
+</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		return $rtn;
+	}
 }
 ?><?php
 namespace renconFramework;

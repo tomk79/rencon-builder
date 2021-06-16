@@ -58,7 +58,7 @@ class main {
 		if( !strlen($app_name) ){
 			$app_name = $composerJson->name;
 		}
-		$this->writer->set_appname( $app_name );
+		$this->writer->set_app_name( $app_name );
 		$app_id = $renconBuilderJson->app_id;
 		if( !strlen($app_id) ){
 			$app_id = preg_replace('/^.*\/(.*?)$/', '$1', $composerJson->name);

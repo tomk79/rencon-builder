@@ -2,27 +2,35 @@
 namespace renconFramework;
 
 /**
- * rencon theme class
+ * theme class
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
 class theme{
 	private $main;
-	private $h1 = 'Home';
+	private $app_name;
+	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main ){
+	public function __construct( $main, $current_page_info ){
 		$this->main = $main;
+		$this->current_page_info = (object) $current_page_info;
 	}
 
 	/**
-	 * h1テキストを登録
+	 * アプリケーション名を取得
 	 */
-	public function set_h1( $h1 ){
-		$this->h1 = $h1;
-		return true;
+	public function app_name(){
+		return $this->app_name;
+	}
+
+	/**
+	 * ページ情報を取得
+	 */
+	public function get_current_page_info(){
+		return $this->current_page_info;
 	}
 
 	/**

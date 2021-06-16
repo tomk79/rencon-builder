@@ -8,44 +8,30 @@
 namespace renconFramework;
 
 // =-=-=-=-=-=-=-=-=-=-=-= Configuration START =-=-=-=-=-=-=-=-=-=-=-=
-$conf = new \stdClass();
 
-
-/* --------------------------------------
- * ログインユーザーのIDとパスワードの対
- * 
- * rencon の初期画面は、ログイン画面から始まります。
- * `$conf->users` に 登録されたユーザーが、ログインを許可されます。
- * ユーザーIDを キー に、sha1ハッシュ化されたパスワード文字列を 値 に持つ連想配列で設定してください。
- * ユーザーは、複数登録できます。
- */
-$conf->users = array(
-	"admin" => sha1("admin"),
-);
-
-
-
+/*-- config --*/
 
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
 
-$app = new framework( $conf );
+$app = new app( $conf );
 $app->run();
 
-class framework {
+class app {
 
 	private $conf;
 	private $fs;
 	private $req;
 	private $resources;
-	private $theme;
+
+	private $app_id = '<!-- app_id -->';
+	private $app_name = '<!-- app_name -->';
 
 	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->resources = new resources($this);
-		$this->theme = new theme($this);
 	}
 
 	public function conf(){ return $this->conf; }
@@ -89,20 +75,19 @@ class framework {
 			$controller = $route[$action];
 			ob_start();
 			call_user_func($controller->page);
-			$contents = ob_get_clean();
-			$html = $this->theme( $contents );
+			$content = ob_get_clean();
+
+			$page_info = array(
+				'id' => $action,
+				'title' => $controller->title,
+			);
+
+			$theme = new theme( $this, $page_info );
+			$html = $theme->bind( $content );
 			echo $html;
 
 		}
 		exit();
-	}
-
-
-	public function theme( $content ){
-		ob_start();
-?>/* theme template */<?php
-		$html = ob_get_clean();
-		return $html;
 	}
 
 }

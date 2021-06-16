@@ -1,13 +1,16 @@
 <?php
 /* ---------------------
 
-  Application Sample v0.0.1-alpha.1+dev
+  <!-- appname --> v0.0.1-alpha.1+dev
 
 --------------------- */
 
 namespace renconFramework;
 
 // =-=-=-=-=-=-=-=-=-=-=-= Configuration START =-=-=-=-=-=-=-=-=-=-=-=
+
+
+
 $conf = new \stdClass();
 
 
@@ -23,29 +26,29 @@ $conf->users = array(
 	"admin" => sha1("admin"),
 );
 
-
-
+?>
 
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
 
-$app = new framework( $conf );
+$app = new app( $conf );
 $app->run();
 
-class framework {
+class app {
 
 	private $conf;
 	private $fs;
 	private $req;
 	private $resources;
-	private $theme;
+
+	private $app_id = 'app01';
+	private $app_name = 'Application Sample';
 
 	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->resources = new resources($this);
-		$this->theme = new theme($this);
 	}
 
 	public function conf(){ return $this->conf; }
@@ -108,41 +111,19 @@ var_dump( $_REQUEST );
 			$controller = $route[$action];
 			ob_start();
 			call_user_func($controller->page);
-			$contents = ob_get_clean();
-			$html = $this->theme( $contents );
+			$content = ob_get_clean();
+
+			$page_info = array(
+				'id' => $action,
+				'title' => $controller->title,
+			);
+
+			$theme = new theme( $this, $page_info );
+			$html = $theme->bind( $content );
 			echo $html;
 
 		}
 		exit();
-	}
-
-
-	public function theme( $content ){
-		ob_start();
-?><!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title></title>
-<link rel="stylesheet" href="?res=theme.css" />
-</head>
-<body>
-
-
-<hr />
-<div class="theme-middle">
-<h1></h1>
-<div class="contents">
-<?= $content ?>
-</div>
-</div>
-
-<script src="?res=theme.js"></script>
-</body>
-</html>
-<?php
-		$html = ob_get_clean();
-		return $html;
 	}
 
 }
@@ -2140,27 +2121,35 @@ class request{
 namespace renconFramework;
 
 /**
- * rencon theme class
+ * theme class
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
 class theme{
 	private $main;
-	private $h1 = 'Home';
+	private $app_name;
+	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main ){
+	public function __construct( $main, $current_page_info ){
 		$this->main = $main;
+		$this->current_page_info = (object) $current_page_info;
 	}
 
 	/**
-	 * h1テキストを登録
+	 * アプリケーション名を取得
 	 */
-	public function set_h1( $h1 ){
-		$this->h1 = $h1;
-		return true;
+	public function app_name(){
+		return $this->app_name;
+	}
+
+	/**
+	 * ページ情報を取得
+	 */
+	public function get_current_page_info(){
+		return $this->current_page_info;
 	}
 
 	/**
@@ -2173,11 +2162,14 @@ class theme{
 		}
 		$class_active['active'] = $action_ary[0];
 		ob_start();
-		?><!DOCTYPE html>
+		?><?php
+$current_page_info = $this->get_current_page_info();
+?>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
-<title></title>
+<title><?= htmlspecialchars( $current_page_info->title ) ?></title>
 <link rel="stylesheet" href="?res=theme.css" />
 </head>
 <body>
@@ -2185,7 +2177,7 @@ class theme{
 
 <hr />
 <div class="theme-middle">
-<h1></h1>
+<h1><?= nl2br( htmlspecialchars( $current_page_info->title ) ) ?></h1>
 <div class="contents">
 <?= $content ?>
 </div>

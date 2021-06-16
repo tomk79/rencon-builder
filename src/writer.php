@@ -15,8 +15,8 @@ class writer {
 	/** version */
 	private $version;
 
-	/** appname */
-	private $appname;
+	/** app_name */
+	private $app_name;
 
 	/** $require_files */
 	private $require_files;
@@ -45,8 +45,8 @@ class writer {
 	/**
 	 * アプリケーション名をセット
 	 */
-	public function set_appname($appname){
-		$this->appname = $appname;
+	public function set_app_name($app_name){
+		$this->app_name = $app_name;
 	}
 
 	/**
@@ -126,16 +126,28 @@ class writer {
 
 		}
 
+		$src_config_template = '';
+		if( $this->renconBuilderJson->config_template ){
+			$src_config_template .= file_get_contents( $this->renconBuilderJson->config_template );
+		}else{
+			$src_config_template = '$conf = new \stdClass();';
+		}
+		$src_config_template = trim($src_config_template);
+		$src_config_template = preg_replace('/^\<\?php/', '', $src_config_template);
+		$src_config_template = preg_replace('/^\?\>/', '', $src_config_template);
+
+
 		$src_template = '';
 		if( $this->renconBuilderJson->theme ){
 			$src_template .= file_get_contents( $this->renconBuilderJson->theme );
 		}
 
 
-		$framework = $framework_files->get('framework');
-		$framework = str_replace('<!-- appname -->', $this->appname, $framework);
+		$framework = $framework_files->get('app');
+		$framework = str_replace('<!-- app_name -->', $this->app_name, $framework);
 		$framework = str_replace('<!-- app_id -->', $this->app_id, $framework);
 		$framework = str_replace('<!-- version -->', $this->version, $framework);
+		$framework = str_replace('/*-- config --*/', $src_config_template, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
 		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;
@@ -145,13 +157,13 @@ class writer {
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
 
-		$src_theme .= $framework_files->get('theme');
+		$src_theme = $framework_files->get('theme');
 		$src_theme = str_replace('/* theme template */', $src_template, $src_theme);
 		$rtn .= $src_theme;
 
 
 		$src_login = $framework_files->get('login');
-		$src_login = str_replace('<!-- appname -->', $this->appname, $src_login);
+		$src_login = str_replace('<!-- app_name -->', $this->app_name, $src_login);
 		$src_login = str_replace('<!-- app_id -->', $this->app_id, $src_login);
 		$rtn .= $src_login;
 

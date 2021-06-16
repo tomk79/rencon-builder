@@ -37,11 +37,13 @@ class framework {
 	private $conf;
 	private $fs;
 	private $req;
+	private $resources;
 
 	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
+		$this->resources = new resources($this);
 	}
 
 	public function conf(){ return $this->conf; }
@@ -60,8 +62,8 @@ class framework {
 		$controller = null;
 
 		if( strlen($resource) ){
-			header("Content-type: ".$this->mimetype($resource));
-			$bin = $this->resource($resource);
+			header("Content-type: ".$this->resources->get_mime_type($resource));
+			$bin = $this->resources->get($resource);
 			echo $bin;
 			exit();
 
@@ -91,49 +93,6 @@ class framework {
 
 		}
 		exit();
-	}
-
-
-
-	public function resource($path){
-		$resources = array(
-
-/* function resource() */
-
-		);
-		if( !array_key_exists($path, $resources) ){ return false; }
-		return base64_decode($resources[$path]);
-	}
-
-	public function mimetype( $path ){
-		$ext = preg_replace('/^.*\.([a-z0-9]+)$/i', '$1', $path);
-		$ext = strtolower( $ext );
-
-		$mimetype = 'text/plain';
-		switch($ext){
-			case 'htm':
-			case 'html':
-				$mimetype = 'text/html';
-				break;
-			case 'gif':
-				$mimetype = 'image/gif';
-				break;
-			case 'png':
-				$mimetype = 'image/png';
-				break;
-			case 'jpg':
-			case 'jpe':
-			case 'jpeg':
-				$mimetype = 'image/jpeg';
-				break;
-			case 'css':
-				$mimetype = 'text/css';
-				break;
-			case 'js':
-				$mimetype = 'text/javascript';
-				break;
-		}
-		return $mimetype;
 	}
 
 

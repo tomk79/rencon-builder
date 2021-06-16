@@ -125,7 +125,6 @@ class writer {
 		$framework = str_replace('<!-- appname -->', $this->appname.' v'.$this->version, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
 		$framework = str_replace('/* theme template */', $src_theme, $framework);
-		$framework = str_replace('/* function resource() */', $src_function_resource, $framework);
 
 		$rtn .= $framework;
 		$rtn .= $framework_files->get('conf');
@@ -144,6 +143,10 @@ class writer {
 				$rtn .= $bin;
 			}
 		}
+
+		$resourceMgr = $framework_files->get('resources');
+		$resourceMgr = str_replace('/* function resource() */', $src_function_resource, $resourceMgr);
+		$rtn .= $resourceMgr;
 
 		return $this->utils->fs()->save_file( $this->renconBuilderJson->dist, $rtn );
 	}

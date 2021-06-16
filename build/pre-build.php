@@ -13,6 +13,7 @@ $src .= '           "conf" => '.var_export(base64_encode( trim( file_get_content
 $src .= '           "filesystem" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/filesystem.php' ) ) ), true).','."\n";
 $src .= '           "request" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/request.php' ) ) ), true).','."\n";
 $src .= '           "login" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/login.php' ) ) ), true).','."\n";
+$src .= '           "resources" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/resources.php' ) ) ), true).','."\n";
 $src .= '       );'."\n";
 $src .= '       return base64_decode($files[$className]);'."\n";
 $src .= '   }'."\n";

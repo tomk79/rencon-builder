@@ -129,6 +129,9 @@ class writer {
 
 		$rtn .= $framework;
 		$rtn .= $framework_files->get('conf');
+		$rtn .= $framework_files->get('filesystem');
+		$rtn .= $framework_files->get('request');
+		$rtn .= $framework_files->get('login');
 
 		foreach( $this->require_files as $package_name => $files ){
 			foreach( $files as $file ){

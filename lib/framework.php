@@ -11,6 +11,17 @@ namespace renconFramework;
 $conf = new \stdClass();
 
 
+/* --------------------------------------
+ * ログインユーザーのIDとパスワードの対
+ * 
+ * rencon の初期画面は、ログイン画面から始まります。
+ * `$conf->users` に 登録されたユーザーが、ログインを許可されます。
+ * ユーザーIDを キー に、sha1ハッシュ化されたパスワード文字列を 値 に持つ連想配列で設定してください。
+ * ユーザーは、複数登録できます。
+ */
+$conf->users = array(
+	"admin" => sha1("admin"),
+);
 
 
 
@@ -24,9 +35,18 @@ $app->run();
 class framework {
 
 	private $conf;
-	public function __construct($conf){
+	private $fs;
+	private $req;
+
+	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
+		$this->fs = new filesystem();
+		$this->req = new request();
 	}
+
+	public function conf(){ return $this->conf; }
+	public function fs(){ return $this->fs; }
+	public function req(){ return $this->req; }
 
 	public function run(){
 		$route = array(
@@ -35,21 +55,32 @@ class framework {
 
 		);
 
-		$action = '';
-		$resource = '';
+		$action = $this->req->get_param('a');
+		$resource = $this->req->get_param('res');
 		$controller = null;
 
-		if( isset( $_REQUEST ) && array_key_exists( 'res', $_REQUEST ) ){
-			$resource = $_REQUEST['res'];
+		if( strlen($resource) ){
 			header("Content-type: ".$this->mimetype($resource));
 			$bin = $this->resource($resource);
 			echo $bin;
 			exit();
 
 		}
-		if( !isset( $_REQUEST ) || array_key_exists( 'a', $_REQUEST ) ){
-			$action = $_REQUEST['a'];
+
+		header('Content-type: text/html'); // default
+
+		$login = new login($this);
+		if( !$login->check() ){
+			$login->please_login();
+			exit;
 		}
+
+		if( $action == 'logout' ){
+			$login->logout();
+			exit;
+		}
+
+
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
 			ob_start();

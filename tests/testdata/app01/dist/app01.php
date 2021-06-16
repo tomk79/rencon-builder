@@ -11,6 +11,17 @@ namespace renconFramework;
 $conf = new \stdClass();
 
 
+/* --------------------------------------
+ * ログインユーザーのIDとパスワードの対
+ * 
+ * rencon の初期画面は、ログイン画面から始まります。
+ * `$conf->users` に 登録されたユーザーが、ログインを許可されます。
+ * ユーザーIDを キー に、sha1ハッシュ化されたパスワード文字列を 値 に持つ連想配列で設定してください。
+ * ユーザーは、複数登録できます。
+ */
+$conf->users = array(
+	"admin" => sha1("admin"),
+);
 
 
 
@@ -24,9 +35,18 @@ $app->run();
 class framework {
 
 	private $conf;
-	public function __construct($conf){
+	private $fs;
+	private $req;
+
+	public function __construct( $conf ){
 		$this->conf = new conf( $conf );
+		$this->fs = new filesystem();
+		$this->req = new request();
 	}
+
+	public function conf(){ return $this->conf; }
+	public function fs(){ return $this->fs; }
+	public function req(){ return $this->req; }
 
 	public function run(){
 		$route = array(
@@ -54,21 +74,32 @@ var_dump( $_REQUEST );
 
 		);
 
-		$action = '';
-		$resource = '';
+		$action = $this->req->get_param('a');
+		$resource = $this->req->get_param('res');
 		$controller = null;
 
-		if( isset( $_REQUEST ) && array_key_exists( 'res', $_REQUEST ) ){
-			$resource = $_REQUEST['res'];
+		if( strlen($resource) ){
 			header("Content-type: ".$this->mimetype($resource));
 			$bin = $this->resource($resource);
 			echo $bin;
 			exit();
 
 		}
-		if( !isset( $_REQUEST ) || array_key_exists( 'a', $_REQUEST ) ){
-			$action = $_REQUEST['a'];
+
+		header('Content-type: text/html'); // default
+
+		$login = new login($this);
+		if( !$login->check() ){
+			$login->please_login();
+			exit;
 		}
+
+		if( $action == 'logout' ){
+			$login->logout();
+			exit;
+		}
+
+
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
 			ob_start();
@@ -236,6 +267,2055 @@ class conf{
 			return false;
 		}
 		return true;
+	}
+
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * tomk79/filesystem core class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class filesystem{
+
+	/**
+	 * ファイルおよびディレクトリ操作時のデフォルトパーミッション
+	 */
+	private $default_permission = array('dir'=>0775,'file'=>0775);
+	/**
+	 * ファイルシステムの文字セット
+	 */
+	private $filesystem_encoding = null;
+
+	/**
+	 * コンストラクタ
+	 *
+	 * @param object $conf 設定オブジェクト
+	 */
+	public function __construct($conf=null){
+		$conf = json_decode( json_encode($conf), true );
+		if(!is_array($conf)){
+			$conf = array();
+		}
+		if( array_key_exists('file_default_permission', $conf) && strlen( $conf['file_default_permission'] ) ){
+			$this->default_permission['file'] = octdec( $conf['file_default_permission'] );
+		}
+		if( array_key_exists('dir_default_permission', $conf) && strlen( $conf['dir_default_permission'] ) ){
+			$this->default_permission['dir'] = octdec( $conf['dir_default_permission'] );
+		}
+		if( array_key_exists('filesystem_encoding', $conf) && strlen( $conf['filesystem_encoding'] ) ){
+			$this->filesystem_encoding = trim( $conf['filesystem_encoding'] );
+		}
+	}
+
+	/**
+	 * 書き込み/上書きしてよいアイテムか検証する。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool 書き込み可能な場合 `true`、不可能な場合に `false` を返します。
+	 */
+	public function is_writable( $path ){
+		$path = $this->localize_path($path);
+		if( !$this->is_file($path) ){
+			return @is_writable( dirname($path) );
+		}
+		return @is_writable( $path );
+	}//is_writable()
+
+	/**
+	 * 読み込んでよいアイテムか検証する。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool 読み込み可能な場合 `true`、不可能な場合に `false` を返します。
+	 */
+	public function is_readable( $path ){
+		$path = $this->localize_path($path);
+		return @is_readable( $path );
+	}//is_readable()
+
+	/**
+	 * ファイルが存在するかどうか調べる。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool ファイルが存在する場合 `true`、存在しない場合、またはディレクトリが存在する場合に `false` を返します。
+	 */
+	public function is_file( $path ){
+		$path = $this->localize_path($path);
+		return @is_file( $path );
+	}//is_file()
+
+	/**
+	 * シンボリックリンクかどうか調べる。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool ファイルがシンボリックリンクの場合 `true`、存在しない場合、それ以外の場合に `false` を返します。
+	 */
+	public function is_link( $path ){
+		$path = $this->localize_path($path);
+		return @is_link( $path );
+	}//is_link()
+
+	/**
+	 * ディレクトリが存在するかどうか調べる。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool ディレクトリが存在する場合 `true`、存在しない場合、またはファイルが存在する場合に `false` を返します。
+	 */
+	public function is_dir( $path ){
+		$path = $this->localize_path($path);
+		return @is_dir( $path );
+	}//is_dir()
+
+	/**
+	 * ファイルまたはディレクトリが存在するかどうか調べる。
+	 *
+	 * @param string $path 検証対象のパス
+	 * @return bool ファイルまたはディレクトリが存在する場合 `true`、存在しない場合に `false` を返します。
+	 */
+	public function file_exists( $path ){
+		$path = $this->localize_path($path);
+		return @file_exists( $path );
+	}//file_exists()
+
+	/**
+	 * ディレクトリを作成する。
+	 *
+	 * @param string $dirpath 作成するディレクトリのパス
+	 * @param int $perm 作成するディレクトリに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function mkdir( $dirpath , $perm = null ){
+		$dirpath = $this->localize_path($dirpath);
+
+		if( $this->is_dir( $dirpath ) ){
+			// 既にディレクトリがあったら、作成を試みない。
+			$this->chmod( $dirpath , $perm );
+			return true;
+		}
+		$result = @mkdir( $dirpath );
+		$this->chmod( $dirpath , $perm );
+		clearstatcache();
+		return	$result;
+	}//mkdir()
+
+	/**
+	 * ディレクトリを作成する(上層ディレクトリも全て作成)
+	 *
+	 * @param string $dirpath 作成するディレクトリのパス
+	 * @param int $perm 作成するディレクトリに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function mkdir_r( $dirpath , $perm = null ){
+		$dirpath = $this->localize_path($dirpath);
+		if( $this->is_dir( $dirpath ) ){
+			return true;
+		}
+		if( $this->is_file( $dirpath ) ){
+			return false;
+		}
+		$patharray = explode( DIRECTORY_SEPARATOR , $this->localize_path( $this->get_realpath($dirpath) ) );
+		$targetpath = '';
+		foreach( $patharray as $idx=>$Line ){
+			if( !strlen( $Line ) || $Line == '.' || $Line == '..' ){ continue; }
+			if(!($idx===0 && DIRECTORY_SEPARATOR == '\\' && preg_match('/^[a-zA-Z]\:$/s', $Line))){
+				$targetpath .= DIRECTORY_SEPARATOR;
+			}
+			$targetpath .= $Line;
+
+			// clearstatcache();
+			if( !$this->is_dir( $targetpath ) ){
+				$targetpath = $this->localize_path( $targetpath );
+				if( !$this->mkdir( $targetpath , $perm ) ){
+					return false;
+				}
+			}
+		}
+		return true;
+	}//mkdir_r()
+
+	/**
+	 * ファイルやディレクトリを中身ごと完全に削除する。
+	 *
+	 * このメソッドは、ファイルやシンボリックリンクも削除します。
+	 * ディレクトリを削除する場合は、中身ごと完全に削除します。
+	 * シンボリックリンクは、その先を追わず、シンボリックリンク本体のみを削除します。
+	 *
+	 * @param string $path 対象のパス
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function rm( $path ){
+		$path = $this->localize_path($path);
+
+		if( !$this->is_writable( $path ) ){
+			return false;
+		}
+		$path = @realpath( $path );
+		if( $path === false ){ return false; }
+		if( $this->is_file( $path ) || $this->is_link( $path ) ){
+			// ファイルまたはシンボリックリンクの場合の処理
+			$result = @unlink( $path );
+			return	$result;
+
+		}elseif( $this->is_dir( $path ) ){
+			// ディレクトリの処理
+			$flist = $this->ls( $path );
+			if( is_array($flist) ){
+				foreach ( $flist as $Line ){
+					if( $Line == '.' || $Line == '..' ){ continue; }
+					$this->rm( $path.DIRECTORY_SEPARATOR.$Line );
+				}
+			}
+			$result = @rmdir( $path );
+			return	$result;
+
+		}
+
+		return false;
+	}//rm()
+
+	/**
+	 * ディレクトリを削除する。
+	 *
+	 * このメソッドはディレクトリを削除します。
+	 * 中身のない、空のディレクトリ以外は削除できません。
+	 *
+	 * @param string $path 対象ディレクトリのパス
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function rmdir( $path ){
+		$path = $this->localize_path($path);
+
+		if( !$this->is_writable( $path ) ){
+			return false;
+		}
+		$path = @realpath( $path );
+		if( $path === false ){
+			return false;
+		}
+		if( $this->is_file( $path ) || $this->is_link( $path ) ){
+			// ファイルまたはシンボリックリンクの場合の処理
+			// ディレクトリ以外は削除できません。
+			return false;
+
+		}elseif( $this->is_dir( $path ) ){
+			// ディレクトリの処理
+			// rmdir() は再帰的削除を行いません。
+			// 再帰的に削除したい場合は、代わりに `rm()` または `rmdir_r()` を使用します。
+			return @rmdir( $path );
+		}
+
+		return false;
+	}//rmdir()
+
+	/**
+	 * ディレクトリを再帰的に削除する。
+	 *
+	 * このメソッドはディレクトリを再帰的に削除します。
+	 * 中身のない、空のディレクトリ以外は削除できません。
+	 *
+	 * @param string $path 対象ディレクトリのパス
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function rmdir_r( $path ){
+		$path = $this->localize_path($path);
+
+		if( !$this->is_writable( $path ) ){
+			return false;
+		}
+		$path = @realpath( $path );
+		if( $path === false ){
+			return false;
+		}
+		if( $this->is_file( $path ) || $this->is_link( $path ) ){
+			// ファイルまたはシンボリックリンクの場合の処理
+			// ディレクトリ以外は削除できません。
+			return false;
+
+		}elseif( $this->is_dir( $path ) ){
+			// ディレクトリの処理
+			$filelist = $this->ls($path);
+			if( is_array($filelist) ){
+				foreach( $filelist as $basename ){
+					if( $this->is_file( $path.DIRECTORY_SEPARATOR.$basename ) ){
+						$this->rm( $path.DIRECTORY_SEPARATOR.$basename );
+					}else if( !$this->rmdir_r( $path.DIRECTORY_SEPARATOR.$basename ) ){
+						return false;
+					}
+				}
+			}
+			return $this->rmdir( $path );
+		}
+
+		return false;
+	}//rmdir_r()
+
+
+	/**
+	 * ファイルを上書き保存する。
+	 *
+	 * このメソッドは、`$filepath` にデータを保存します。
+	 * もともと保存されていた内容は破棄され、新しいデータで上書きします。
+	 *
+	 * @param string $filepath 保存先ファイルのパス
+	 * @param string $content 保存する内容
+	 * @param int $perm 保存するファイルに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function save_file( $filepath , $content , $perm = null ){
+		$filepath = $this->get_realpath($filepath);
+		$filepath = $this->localize_path($filepath);
+
+		if( $this->is_dir( $filepath ) ){
+			return false;
+		}
+		if( !$this->is_writable( $filepath ) ){
+			return false;
+		}
+
+		if( !strlen( $content ) ){
+			// 空白のファイルで上書きしたい場合
+			if( $this->is_file( $filepath ) ){
+				@unlink( $filepath );
+			}
+			@touch( $filepath );
+			$this->chmod( $filepath , $perm );
+			clearstatcache();
+			return $this->is_file( $filepath );
+		}
+
+		clearstatcache();
+		$fp = fopen( $filepath, 'w' );
+		if( !is_resource( $fp ) ){
+			return false;
+		}
+
+		for ($written = 0; $written < strlen($content); $written += $fwrite) {
+			$fwrite = fwrite($fp, substr($content, $written));
+			if ($fwrite === false) {
+				break;
+			}
+		}
+
+		fclose($fp);
+
+		$this->chmod( $filepath , $perm );
+		clearstatcache();
+		return !empty( $written );
+	}//save_file()
+
+	/**
+	 * ファイルの中身を文字列として取得する。
+	 *
+	 * @param string $path ファイルのパス
+	 * @return string ファイル `$path` の内容
+	 */
+	public function read_file( $path ){
+		$path = $this->localize_path($path);
+		return file_get_contents( $path );
+	}//file_get_contents()
+
+	/**
+	 * ファイルの更新日時を比較する。
+	 *
+	 * @param string $path_a 比較対象A
+	 * @param string $path_b 比較対象B
+	 * @return bool|null
+	 * `$path_a` の方が新しかった場合に `true`、
+	 * `$path_b` の方が新しかった場合に `false`、
+	 * 同時だった場合に `null` を返します。
+	 *
+	 * いずれか一方、または両方のファイルが存在しない場合、次のように振る舞います。
+	 * - 両方のファイルが存在しない場合 = `null`
+	 * - $path_a が存在せず、$path_b は存在する場合 = `false`
+	 * - $path_a が存在し、$path_b は存在しない場合 = `true`
+	 */
+	public function is_newer_a_than_b( $path_a , $path_b ){
+		$path_a = $this->localize_path($path_a);
+		$path_b = $this->localize_path($path_b);
+
+		// 比較できない場合に
+		if(!file_exists($path_a) && !file_exists($path_b)){return null;}
+		if(!file_exists($path_a)){return false;}
+		if(!file_exists($path_b)){return true;}
+
+		$mtime_a = filemtime( $path_a );
+		$mtime_b = filemtime( $path_b );
+		if( $mtime_a > $mtime_b ){
+			return true;
+		}elseif( $mtime_a < $mtime_b ){
+			return false;
+		}
+		return null;
+	}//is_newer_a_than_b()
+
+	/**
+	 * ファイル名/ディレクトリ名を変更する。
+	 *
+	 * @param string $original 現在のファイルまたはディレクトリ名
+	 * @param string $newname 変更後のファイルまたはディレクトリ名
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function rename( $original , $newname ){
+		$original = $this->localize_path($original);
+		$newname  = $this->localize_path($newname );
+
+		if( !@file_exists( $original ) ){ return false; }
+		if( !$this->is_writable( $original ) ){ return false; }
+		return @rename( $original , $newname );
+	}//rename()
+
+	/**
+	 * ファイル名/ディレクトリ名を強制的に変更する。
+	 *
+	 * 移動先の親ディレクトリが存在しない場合にも、親ディレクトリを作成して移動するよう試みます。
+	 *
+	 * @param string $original 現在のファイルまたはディレクトリ名
+	 * @param string $newname 変更後のファイルまたはディレクトリ名
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function rename_f( $original , $newname ){
+		$original = $this->localize_path($original);
+		$newname  = $this->localize_path($newname );
+
+		if( !@file_exists( $original ) ){ return false; }
+		if( !$this->is_writable( $original ) ){ return false; }
+		$dirname = dirname( $newname );
+		if( !$this->is_dir( $dirname ) ){
+			if( !$this->mkdir_r( $dirname ) ){
+				return false;
+			}
+		}
+		return @rename( $original , $newname );
+	}//rename_f()
+
+	/**
+	 * 絶対パスを得る。
+	 *
+	 * パス情報を受け取り、スラッシュから始まるサーバー内部絶対パスに変換して返します。
+	 *
+	 * このメソッドは、PHPの `realpath()` と異なり、存在しないパスも絶対パスに変換します。
+	 *
+	 * @param string $path 対象のパス
+	 * @param string $cd カレントディレクトリパス。
+	 * 実在する有効なディレクトリのパス、または絶対パスの表現で指定される必要があります。
+	 * 省略時、カレントディレクトリを自動採用します。
+	 * @return string 絶対パス
+	 */
+	public function get_realpath( $path, $cd = '.' ){
+		$is_dir = false;
+		if( preg_match( '/(\/|\\\\)+$/s', $path ) ){
+			$is_dir = true;
+		}
+		$path = $this->localize_path($path);
+		if( is_null($cd) ){ $cd = '.'; }
+		$cd = $this->localize_path($cd);
+		$preg_dirsep = preg_quote(DIRECTORY_SEPARATOR, '/');
+
+		if( $this->is_dir($cd) ){
+			$cd = realpath($cd);
+		}elseif( !preg_match('/^((?:[A-Za-z]\\:'.$preg_dirsep.')|'.$preg_dirsep.'{1,2})(.*?)$/', $cd) ){
+			$cd = false;
+		}
+		if( $cd === false ){
+			return false;
+		}
+
+		$prefix = '';
+		$localpath = $path;
+		if( preg_match('/^((?:[A-Za-z]\\:'.$preg_dirsep.')|'.$preg_dirsep.'{1,2})(.*?)$/', $path, $matched) ){
+			// もともと絶対パスの指定か調べる
+			$prefix = preg_replace('/'.$preg_dirsep.'$/', '', $matched[1]);
+			$localpath = $matched[2];
+			$cd = null; // 元の指定が絶対パスだったら、カレントディレクトリは関係ないので捨てる。
+		}
+
+		$path = $cd.DIRECTORY_SEPARATOR.'.'.DIRECTORY_SEPARATOR.$localpath;
+
+		if( file_exists( $prefix.$path ) ){
+			$rtn = realpath( $prefix.$path );
+			if( $is_dir && $rtn != realpath('/') ){
+				$rtn .= DIRECTORY_SEPARATOR;
+			}
+			return $rtn;
+		}
+
+		$paths = explode( DIRECTORY_SEPARATOR, $path );
+		$path = '';
+		foreach( $paths as $idx=>$row ){
+			if( $row == '' || $row == '.' ){
+				continue;
+			}
+			if( $row == '..' ){
+				$path = dirname($path);
+				if($path == DIRECTORY_SEPARATOR){
+					$path = '';
+				}
+				continue;
+			}
+			if(!($idx===0 && DIRECTORY_SEPARATOR == '\\' && preg_match('/^[a-zA-Z]\:$/s', $row))){
+				$path .= DIRECTORY_SEPARATOR;
+			}
+			$path .= $row;
+		}
+
+		$rtn = $prefix.$path;
+		if( $is_dir ){
+			$rtn .= DIRECTORY_SEPARATOR;
+		}
+		return $rtn;
+	}
+
+	/**
+	 * 相対パスを得る。
+	 *
+	 * パス情報を受け取り、ドットスラッシュから始まる相対絶対パスに変換して返します。
+	 *
+	 * @param string $path 対象のパス
+	 * @param string $cd カレントディレクトリパス。
+	 * 実在する有効なディレクトリのパス、または絶対パスの表現で指定される必要があります。
+	 * 省略時、カレントディレクトリを自動採用します。
+	 * @return string 相対パス
+	 */
+	public function get_relatedpath( $path, $cd = '.' ){
+		$is_dir = false;
+		if( preg_match( '/(\/|\\\\)+$/s', $path ) ){
+			$is_dir = true;
+		}
+		if( @!strlen( $cd ) ){
+			$cd = realpath('.');
+		}elseif( $this->is_dir($cd) ){
+			$cd = realpath($cd);
+		}elseif( $this->is_file($cd) ){
+			$cd = realpath(dirname($cd));
+		}
+		$path = $this->get_realpath($path, $cd);
+
+		$normalize = function( $tmp_path, $fs ){
+			$tmp_path = $fs->localize_path( $tmp_path );
+			$preg_dirsep = preg_quote(DIRECTORY_SEPARATOR, '/');
+			if( DIRECTORY_SEPARATOR == '\\' ){
+				$tmp_path = preg_replace( '/^[a-zA-Z]\:/s', '', $tmp_path );
+			}
+			$tmp_path = preg_replace( '/^('.$preg_dirsep.')+/s', '', $tmp_path );
+			$tmp_path = preg_replace( '/('.$preg_dirsep.')+$/s', '', $tmp_path );
+			if( strlen($tmp_path) ){
+				$tmp_path = explode( DIRECTORY_SEPARATOR, $tmp_path );
+			}else{
+				$tmp_path = array();
+			}
+
+			return $tmp_path;
+		};
+
+		$cd = $normalize($cd, $this);
+		$path = $normalize($path, $this);
+
+		$rtn = array();
+		while( 1 ){
+			if( !count($cd) || !count($path) ){
+				break;
+			}
+			if( $cd[0] === $path[0] ){
+				array_shift( $cd );
+				array_shift( $path );
+				continue;
+			}
+			break;
+		}
+		if( count($cd) ){
+			foreach($cd as $dirname){
+				array_push( $rtn, '..' );
+			}
+		}else{
+			array_push( $rtn, '.' );
+		}
+		$rtn = array_merge( $rtn, $path );
+		$rtn = implode( DIRECTORY_SEPARATOR, $rtn );
+
+		if( $is_dir ){
+			$rtn .= DIRECTORY_SEPARATOR;
+		}
+		return $rtn;
+	}
+
+	/**
+	 * パス情報を得る。
+	 *
+	 * @param string $path 対象のパス
+	 * @return array パス情報
+	 */
+	public function pathinfo( $path ){
+		if(strpos($path,'#')!==false){ list($path, $hash) = @explode( '#', $path, 2 ); }
+		if(strpos($path,'?')!==false){ list($path, $query) = @explode( '?', $path, 2 ); }
+
+		$pathinfo = pathinfo( $path );
+		$pathinfo['filename'] = $this->trim_extension( $pathinfo['basename'] );
+		$pathinfo['extension'] = $this->get_extension( $pathinfo['basename'] );
+		$pathinfo['query'] = (@strlen($query) ? '?'.$query : null);
+		$pathinfo['hash'] = (@strlen($hash) ? '#'.$hash : null);
+		return $pathinfo;
+	}
+
+	/**
+	 * パス情報から、ファイル名を取得する。
+	 *
+	 * @param string $path 対象のパス
+	 * @return string 抜き出されたファイル名
+	 */
+	public function get_basename( $path ){
+		$path = pathinfo( $path , PATHINFO_BASENAME );
+		if( !strlen($path) ){$path = null;}
+		return $path;
+	}
+
+	/**
+	 * パス情報から、拡張子を除いたファイル名を取得する。
+	 *
+	 * @param string $path 対象のパス
+	 * @return string 拡張子が除かれたパス
+	 */
+	public function trim_extension( $path ){
+		$pathinfo = pathinfo( $path );
+		$RTN = preg_replace( '/\.'.preg_quote( @$pathinfo['extension'], '/' ).'$/' , '' , $path );
+		return $RTN;
+	}
+
+	/**
+	 * ファイル名を含むパス情報から、ファイルが格納されているディレクトリ名を取得する。
+	 *
+	 * @param string $path 対象のパス
+	 * @return string 親ディレクトリのパス
+	 */
+	public function get_dirpath( $path ){
+		$path = pathinfo( $path , PATHINFO_DIRNAME );
+		if( !strlen($path) ){$path = null;}
+		return $path;
+	}
+
+	/**
+	 * パス情報から、拡張子を取得する。
+	 *
+	 * @param string $path 対象のパス
+	 * @return string 拡張子
+	 */
+	public function get_extension( $path ){
+		$path = preg_replace('/\#.*$/si', '', $path);
+		$path = preg_replace('/\?.*$/si', '', $path);
+		$path = pathinfo( $path , PATHINFO_EXTENSION );
+		if(!strlen($path)){$path = null;}
+		return $path;
+	}
+
+
+	/**
+	 * CSVファイルを読み込む。
+	 *
+	 * @param string $path 対象のCSVファイルのパス
+	 * @param array $options オプション
+	 * - delimiter = 区切り文字(省略時、カンマ)
+	 * - enclosure = クロージャー文字(省略時、ダブルクオート)
+	 * - size = 一度に読み込むサイズ(省略時、10000)
+	 * - charset = 文字セット(省略時、UTF-8)
+	 * @return array|bool 読み込みに成功した場合、行列を格納した配列、失敗した場合には `false` を返します。
+	 */
+	public function read_csv( $path , $options = array() ){
+		// $options['charset'] は、保存されているCSVファイルの文字エンコードです。
+		// 省略時は UTF-8 から、内部エンコーディングに変換します。
+
+		$path = $this->localize_path($path);
+
+		if( !$this->is_file( $path ) ){
+			// ファイルがなければfalseを返す
+			return false;
+		}
+
+		if( !strlen( @$options['delimiter'] ) )    { $options['delimiter'] = ','; }
+		if( !strlen( @$options['enclosure'] ) )    { $options['enclosure'] = '"'; }
+		if( !strlen( @$options['size'] ) )         { $options['size'] = 10000; }
+		if( !strlen( @$options['charset'] ) )      { $options['charset'] = 'UTF-8'; }//←CSVの文字セット
+
+		$RTN = array();
+		$fp = fopen( $path, 'r' );
+		if( !is_resource( $fp ) ){
+			return false;
+		}
+
+		while( $SMMEMO = fgetcsv( $fp , intval( $options['size'] ) , $options['delimiter'] , $options['enclosure'] ) ){
+			foreach( $SMMEMO as $key=>$row ){
+				$SMMEMO[$key] = mb_convert_encoding( $row , mb_internal_encoding() , $options['charset'].',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP' );
+			}
+			array_push( $RTN , $SMMEMO );
+		}
+		fclose($fp);
+		return $RTN;
+	}//read_csv()
+
+	/**
+	 * 配列をCSV形式に変換する。
+	 *
+	 * 改行コードはLFで出力されます。
+	 *
+	 * @param array $array 2次元配列
+	 * @param array $options オプション
+	 * - charset = 文字セット(省略時、UTF-8)
+	 * @return string 生成されたCSV形式のテキスト
+	 */
+	public function mk_csv( $array , $options = array() ){
+		// $options['charset'] は、出力されるCSV形式の文字エンコードを指定します。
+		// 省略時は UTF-8 に変換して返します。
+		if( !is_array( $array ) ){ $array = array(); }
+
+		if( @!strlen( $options['charset'] ) ){
+			$options['charset'] = 'UTF-8';
+		}
+		$RTN = '';
+		foreach( $array as $Line ){
+			if( is_null( $Line ) ){ continue; }
+			if( !is_array( $Line ) ){ $Line = array(); }
+			foreach( $Line as $cell ){
+				$cell = mb_convert_encoding( $cell , $options['charset'] , mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP' );
+				if( preg_match( '/"/' , $cell ) ){
+					$cell = preg_replace( '/"/' , '""' , $cell);
+				}
+				if( strlen( $cell ) ){
+					$cell = '"'.$cell.'"';
+				}
+				$RTN .= $cell.',';
+			}
+			$RTN = preg_replace( '/,$/' , '' , $RTN );
+			$RTN .= "\n";
+		}
+		return $RTN;
+	}//mk_csv()
+
+	/**
+	 * ファイルを複製する。
+	 *
+	 * @param string $from コピー元ファイルのパス
+	 * @param string $to コピー先のパス
+	 * @param int $perm 保存するファイルに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function copy( $from , $to , $perm = null ){
+		$from = $this->localize_path($from);
+		$to   = $this->localize_path($to  );
+
+		if( !$this->is_file( $from ) ){
+			return false;
+		}
+		if( !$this->is_readable( $from ) ){
+			return false;
+		}
+
+		if( $this->is_file( $to ) ){
+			//	まったく同じファイルだった場合は、複製しないでtrueを返す。
+			if( md5_file( $from ) == md5_file( $to ) && filesize( $from ) == filesize( $to ) ){
+				return true;
+			}
+		}
+		if( !@copy( $from , $to ) ){
+			return false;
+		}
+		$this->chmod( $to , $perm );
+		return true;
+	}//copy()
+
+	/**
+	 * ディレクトリを複製する(下層ディレクトリも全てコピー)
+	 *
+	 * @param string $from コピー元ファイルのパス
+	 * @param string $to コピー先のパス
+	 * @param int $perm 保存するファイルに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function copy_r( $from , $to , $perm = null ){
+		$from = $this->localize_path($from);
+		$to   = $this->localize_path($to  );
+
+		$result = true;
+
+		if( $this->is_file( $from ) ){
+			if( $this->mkdir_r( dirname( $to ) ) ){
+				if( !$this->copy( $from , $to , $perm ) ){
+					$result = false;
+				}
+			}else{
+				$result = false;
+			}
+		}elseif( $this->is_dir( $from ) ){
+			if( !$this->is_dir( $to ) ){
+				if( !$this->mkdir_r( $to ) ){
+					$result = false;
+				}
+			}
+			$itemlist = $this->ls( $from );
+			if( is_array($itemlist) ){
+				foreach( $itemlist as $Line ){
+					if( $Line == '.' || $Line == '..' ){ continue; }
+					if( $this->is_dir( $from.DIRECTORY_SEPARATOR.$Line ) ){
+						if( $this->is_file( $to.DIRECTORY_SEPARATOR.$Line ) ){
+							continue;
+						}elseif( !$this->is_dir( $to.DIRECTORY_SEPARATOR.$Line ) ){
+							if( !$this->mkdir_r( $to.DIRECTORY_SEPARATOR.$Line ) ){
+								$result = false;
+							}
+						}
+						if( !$this->copy_r( $from.DIRECTORY_SEPARATOR.$Line , $to.DIRECTORY_SEPARATOR.$Line , $perm ) ){
+							$result = false;
+						}
+						continue;
+					}elseif( $this->is_file( $from.DIRECTORY_SEPARATOR.$Line ) ){
+						if( !$this->copy_r( $from.DIRECTORY_SEPARATOR.$Line , $to.DIRECTORY_SEPARATOR.$Line , $perm ) ){
+							$result = false;
+						}
+						continue;
+					}
+				}
+			}
+		}
+
+		return $result;
+	}//copy_r()
+
+	/**
+	 * パーミッションを変更する。
+	 *
+	 * @param string $filepath 対象のパス
+	 * @param int $perm 保存するファイルに与えるパーミッション
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function chmod( $filepath , $perm = null ){
+		$filepath = $this->localize_path($filepath);
+
+		if( is_null( $perm ) ){
+			if( $this->is_dir( $filepath ) ){
+				$perm = $this->default_permission['dir'];
+			}else{
+				$perm = $this->default_permission['file'];
+			}
+		}
+		if( is_null( $perm ) ){
+			$perm = 0775; // コンフィグに設定モレがあった場合
+		}
+		return @chmod( $filepath , $perm );
+	}//chmod()
+
+	/**
+	 * パーミッション情報を調べ、3桁の数字で返す。
+	 *
+	 * @param string $path 対象のパス
+	 * @return int|bool 成功時に 3桁の数字、失敗時に `false` を返します。
+	 */
+	public function get_permission( $path ){
+		$path = $this->localize_path($path);
+
+		if( !@file_exists( $path ) ){
+			return false;
+		}
+		$perm = rtrim( sprintf( "%o\n" , fileperms( $path ) ) );
+		$start = strlen( $perm ) - 3;
+		return substr( $perm , $start , 3 );
+	}//get_permission()
+
+
+	/**
+	 * ディレクトリにあるファイル名のリストを配列で返す。
+	 *
+	 * @param string $path 対象ディレクトリのパス
+	 * @return array|bool 成功時にファイルまたはディレクトリ名の一覧を格納した配列、失敗時に `false` を返します。
+	 */
+	public function ls($path){
+		$path = $this->localize_path($path);
+
+		if( $path === false ){ return false; }
+		if( !@file_exists( $path ) ){ return false; }
+		if( !$this->is_dir( $path ) ){ return false; }
+
+		$RTN = array();
+		$dr = @opendir($path);
+		while( ( $ent = readdir( $dr ) ) !== false ){
+			// CurrentDirとParentDirは含めない
+			if( $ent == '.' || $ent == '..' ){ continue; }
+			array_push( $RTN , $ent );
+		}
+		closedir($dr);
+		if( strlen( $this->filesystem_encoding ) ){
+			//PxFW 0.6.4 追加
+			$RTN = @$this->convert_filesystem_encoding( $RTN );
+		}
+		usort($RTN, "strnatcmp");
+		return	$RTN;
+	}//ls()
+
+	/**
+	 * ディレクトリの内部を比較し、$comparisonに含まれない要素を$targetから削除する。
+	 *
+	 * @param string $target クリーニング対象のディレクトリパス
+	 * @param string $comparison 比較するディレクトリのパス
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function compare_and_cleanup( $target , $comparison ){
+		if( is_null( $comparison ) || is_null( $target ) ){ return false; }
+
+		$target = $this->localize_path($target);
+		$comparison = $this->localize_path($comparison);
+
+		if( !@file_exists( $comparison ) && @file_exists( $target ) ){
+			$this->rm( $target );
+			return true;
+		}
+
+		if( $this->is_dir( $target ) ){
+			$flist = $this->ls( $target );
+		}else{
+			return true;
+		}
+
+		if( is_array($flist) ){
+			foreach ( $flist as $Line ){
+				if( $Line == '.' || $Line == '..' ){ continue; }
+				$this->compare_and_cleanup( $target.DIRECTORY_SEPARATOR.$Line , $comparison.DIRECTORY_SEPARATOR.$Line );
+			}
+		}
+
+		return true;
+	}//compare_and_cleanup()
+
+	/**
+	 * ディレクトリを同期する。
+	 *
+	 * @param string $path_sync_from 同期元ディレクトリ
+	 * @param string $path_sync_to 同期先ディレクトリ
+	 * @return bool 常に `true` を返します。
+	 */
+	public function sync_dir( $path_sync_from , $path_sync_to ){
+		$this->copy_r( $path_sync_from , $path_sync_to );
+		$this->compare_and_cleanup( $path_sync_to , $path_sync_from );
+		return true;
+	}//sync_dir()
+
+	/**
+	 * 指定されたディレクトリ以下の、全ての空っぽのディレクトリを削除する。
+	 *
+	 * @param string $path ディレクトリパス
+	 * @param array $options オプション
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function remove_empty_dir( $path , $options = array() ){
+		$path = $this->localize_path($path);
+
+		if( !$this->is_writable( $path ) ){ return false; }
+		if( !$this->is_dir( $path ) ){ return false; }
+		if( $this->is_file( $path ) || $this->is_link( $path ) ){ return false; }
+		$path = @realpath( $path );
+		if( $path === false ){ return false; }
+
+		// --------------------------------------
+		// 次の階層を処理するかどうかのスイッチ
+		$switch_donext = false;
+		if( is_null( $options['depth'] ) ){
+			// 深さの指定がなければ掘る
+			$switch_donext = true;
+		}elseif( !is_int( $options['depth'] ) ){
+			// 指定がnullでも数値でもなければ掘らない
+			$switch_donext = false;
+		}elseif( $options['depth'] <= 0 ){
+			// 指定がゼロ以下なら、今回の処理をして終了
+			$switch_donext = false;
+		}elseif( $options['depth'] > 0 ){
+			// 指定が正の数(ゼロは含まない)なら、掘る
+			$options['depth'] --;
+			$switch_donext = true;
+		}else{
+			return false;
+		}
+		// / 次の階層を処理するかどうかのスイッチ
+		// --------------------------------------
+
+		$flist = $this->ls( $path );
+		if( !count( $flist ) ){
+			// 開いたディレクトリの中身が
+			// "." と ".." のみだった場合
+			// 削除して終了
+			$result = @rmdir( $path );
+			return	$result;
+		}
+		$alive = false;
+		foreach ( $flist as $Line ){
+			if( $Line == '.' || $Line == '..' ){ continue; }
+			if( $this->is_link( $path.DIRECTORY_SEPARATOR.$Line ) ){
+				// シンボリックリンクは無視する。
+			}elseif( $this->is_dir( $path.DIRECTORY_SEPARATOR.$Line ) ){
+				if( $switch_donext ){
+					// さらに掘れと指令があれば、掘る。
+					$this->remove_empty_dir( $path.DIRECTORY_SEPARATOR.$Line , $options );
+				}
+			}
+			if( @file_exists( $path.DIRECTORY_SEPARATOR.$Line ) ){
+				$alive = true;
+			}
+		}
+		if( !$alive ){
+			$result = @rmdir( $path );
+			return	$result;
+		}
+		return true;
+	}//remove_empty_dir()
+
+
+	/**
+	 * 指定された2つのディレクトリの内容を比較し、まったく同じかどうか調べる。
+	 *
+	 * @param string $dir_a 比較対象ディレクトリA
+	 * @param string $dir_b 比較対象ディレクトリB
+	 * @param array $options オプション
+	 * <dl>
+	 *   <dt>bool $options['compare_filecontent']</dt>
+	 * 	   <dd>ファイルの中身も比較するか？</dd>
+	 *   <dt>bool $options['compare_emptydir']</dt>
+	 * 	   <dd>空っぽのディレクトリの有無も評価に含めるか？</dd>
+	 * </dl>
+	 * @return bool 同じ場合に `true`、異なる場合に `false` を返します。
+	 */
+	public function compare_dir( $dir_a , $dir_b , $options = array() ){
+
+		if( strlen( $this->filesystem_encoding ) ){
+			//PxFW 0.6.4 追加
+			$dir_a = @$this->convert_filesystem_encoding( $dir_a );
+			$dir_b = @$this->convert_filesystem_encoding( $dir_b );
+		}
+
+		if( ( $this->is_file( $dir_a ) && !$this->is_file( $dir_b ) ) || ( !$this->is_file( $dir_a ) && $this->is_file( $dir_b ) ) ){
+			return false;
+		}
+		if( ( ( $this->is_dir( $dir_a ) && !$this->is_dir( $dir_b ) ) || ( !$this->is_dir( $dir_a ) && $this->is_dir( $dir_b ) ) ) && $options['compare_emptydir'] ){
+			return false;
+		}
+
+		if( $this->is_file( $dir_a ) && $this->is_file( $dir_b ) ){
+			// --------------------------------------
+			// 両方ファイルだったら
+			if( $options['compare_filecontent'] ){
+				// ファイルの内容も比較する設定の場合、
+				// それぞれファイルを開いて同じかどうかを比較
+				$filecontent_a = $this->read_file( $dir_a );
+				$filecontent_b = $this->read_file( $dir_b );
+				if( $filecontent_a !== $filecontent_b ){
+					return false;
+				}
+			}
+			return true;
+		}
+
+		if( $this->is_dir( $dir_a ) || $this->is_dir( $dir_b ) ){
+			// --------------------------------------
+			// 両方ディレクトリだったら
+			$contlist_a = $this->ls( $dir_a );
+			$contlist_b = $this->ls( $dir_b );
+
+			if( $options['compare_emptydir'] && $contlist_a !== $contlist_b ){
+				// 空っぽのディレクトリも厳密に評価する設定で、
+				// ディレクトリ内の要素配列の内容が異なれば、false。
+				return false;
+			}
+
+			$done = array();
+			foreach( $contlist_a as $Line ){
+				// Aをチェック
+				if( $Line == '..' || $Line == '.' ){ continue; }
+				if( !$this->compare_dir( $dir_a.DIRECTORY_SEPARATOR.$Line , $dir_b.DIRECTORY_SEPARATOR.$Line , $options ) ){
+					return false;
+				}
+				$done[$Line] = true;
+			}
+
+			foreach( $contlist_b as $Line ){
+				// Aに含まれなかったBをチェック
+				if( $done[$Line] ){ continue; }
+				if( $Line == '..' || $Line == '.' ){ continue; }
+				if( !$this->compare_dir( $dir_a.DIRECTORY_SEPARATOR.$Line , $dir_b.DIRECTORY_SEPARATOR.$Line , $options ) ){
+					return false;
+				}
+				$done[$Line] = true;
+			}
+
+		}
+
+		return true;
+	}//compare_dir()
+
+
+	/**
+	 * サーバがUNIXパスか調べる。
+	 *
+	 * @return bool UNIXパスなら `true`、それ以外なら `false` を返します。
+	 */
+	public function is_unix(){
+		if( DIRECTORY_SEPARATOR == '/' ){
+			return true;
+		}
+		return false;
+	}//is_unix()
+
+	/**
+	 * サーバがWindowsパスか調べる。
+	 *
+	 * @return bool Windowsパスなら `true`、それ以外なら `false` を返します。
+	 */
+	public function is_windows(){
+		if( DIRECTORY_SEPARATOR == '\\' ){
+			return true;
+		}
+		return false;
+	}//is_windows()
+
+
+	/**
+	 * パスを正規化する。
+	 *
+	 * 受け取ったパスを、スラッシュ区切りの表現に正規化します。
+	 * Windowsのボリュームラベルが付いている場合は削除します。
+	 * URIスキーム(http, https, ftp など) で始まる場合、2つのスラッシュで始まる場合(`//www.example.com/abc/` など)、これを残して正規化します。
+	 *
+	 *  - 例： `\a\b\c.html` → `/a/b/c.html` バックスラッシュはスラッシュに置き換えられます。
+	 *  - 例： `/a/b////c.html` → `/a/b/c.html` 余計なスラッシュはまとめられます。
+	 *  - 例： `C:\a\b\c.html` → `/a/b/c.html` ボリュームラベルは削除されます。
+	 *  - 例： `http://a/b/c.html` → `http://a/b/c.html` URIスキームは残されます。
+	 *  - 例： `//a/b/c.html` → `//a/b/c.html` ドメイン名は残されます。
+	 *
+	 * @param string $path 正規化するパス
+	 * @return string 正規化されたパス
+	 */
+	public function normalize_path($path){
+		$path = trim($path);
+		$path = $this->convert_encoding( $path );//文字コードを揃える
+		$path = preg_replace( '/\\/|\\\\/s', '/', $path );//バックスラッシュをスラッシュに置き換える。
+		$path = preg_replace( '/^[A-Z]\\:\\//s', '/', $path );//Windowsのボリュームラベルを削除
+		$prefix = '';
+		if( preg_match( '/^((?:[a-zA-Z0-9]+\\:)?\\/)(\\/.*)$/', $path, $matched ) ){
+			$prefix = $matched[1];
+			$path = $matched[2];
+		}
+		$path = preg_replace( '/\\/+/s', '/', $path );//重複するスラッシュを1つにまとめる
+		return $prefix.$path;
+	}
+
+
+	/**
+	 * パスをOSの標準的な表現に変換する。
+	 *
+	 * 受け取ったパスを、OSの標準的な表現に変換します。
+	 * - スラッシュとバックスラッシュの違いを吸収し、`DIRECTORY_SEPARATOR` に置き換えます。
+	 *
+	 * @param string $path ローカライズするパス
+	 * @return string ローカライズされたパス
+	 */
+	public function localize_path($path){
+		$path = $this->convert_filesystem_encoding( $path );//文字コードを揃える
+		$path = preg_replace( '/\\/|\\\\/s', '/', $path );//一旦スラッシュに置き換える。
+		if( $this->is_unix() ){
+			// Windows以外だった場合に、ボリュームラベルを受け取ったら削除する
+			$path = preg_replace( '/^[A-Z]\\:\\//s', '/', $path );//Windowsのボリュームラベルを削除
+		}
+		$path = preg_replace( '/\\/+/s', '/', $path );//重複するスラッシュを1つにまとめる
+		$path = preg_replace( '/\\/|\\\\/s', DIRECTORY_SEPARATOR, $path );
+		return $path;
+	}
+
+
+
+	/**
+	 * 受け取ったテキストを、ファイルシステムエンコードに変換する。
+	 *
+	 * @param mixed $text テキスト
+	 * @return string 文字セット変換後のテキスト
+	 */
+	private function convert_filesystem_encoding( $text ){
+		$RTN = $text;
+		if( !is_callable( 'mb_internal_encoding' ) ){
+			return $text;
+		}
+		if( !strlen( $this->filesystem_encoding ) ){
+			return $text;
+		}
+
+		$to_encoding = $this->filesystem_encoding;
+		$from_encoding = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
+
+		return $this->convert_encoding( $text, $to_encoding, $from_encoding );
+
+	}//convert_filesystem_encoding()
+
+	/**
+	 * 受け取ったテキストを、ファイルシステムエンコードに変換する。
+	 *
+	 * @param mixed $text テキスト
+	 * @param string $to_encoding 文字セット(省略時、内部文字セット)
+	 * @param string $from_encoding 変換前の文字セット
+	 * @return string 文字セット変換後のテキスト
+	 */
+	public function convert_encoding( $text, $to_encoding = null, $from_encoding = null ){
+		$RTN = $text;
+		if( !is_callable( 'mb_internal_encoding' ) ){
+			return $text;
+		}
+
+		$to_encoding_fin = $to_encoding;
+		if( !strlen($to_encoding_fin) ){
+			$to_encoding_fin = mb_internal_encoding();
+		}
+		if( !strlen($to_encoding_fin) ){
+			$to_encoding_fin = 'UTF-8';
+		}
+
+		$from_encoding_fin = (strlen($from_encoding)?$from_encoding.',':'').mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
+
+		// ---
+		if( is_array( $text ) ){
+			$RTN = array();
+			if( !count( $text ) ){
+				return $text;
+			}
+			foreach( $text as $key=>$row ){
+				$RTN[$key] = $this->convert_encoding( $row, $to_encoding, $from_encoding );
+			}
+		}else{
+			if( !strlen( $text ) ){
+				return $text;
+			}
+			$RTN = mb_convert_encoding( $text, $to_encoding_fin, $from_encoding_fin );
+		}
+		return $RTN;
+	}//convert_encoding()
+
+	/**
+	 * 受け取ったテキストを、指定の改行コードに変換する。
+	 *
+	 * @param mixed $text テキスト
+	 * @param string $crlf 改行コード名。CR|LF(default)|CRLF
+	 * @return string 改行コード変換後のテキスト
+	 */
+	public function convert_crlf( $text, $crlf = null ){
+		if( !strlen($crlf) ){
+			$crlf = 'LF';
+		}
+		$crlf_code = "\n";
+		switch(strtoupper($crlf)){
+			case 'CR':
+				$crlf_code = "\r";
+				break;
+			case 'CRLF':
+				$crlf_code = "\r\n";
+				break;
+			case 'LF':
+			default:
+				$crlf_code = "\n";
+				break;
+		}
+		$RTN = $text;
+		if( is_array( $text ) ){
+			$RTN = array();
+			if( !count( $text ) ){
+				return $text;
+			}
+			foreach( $text as $key=>$val ){
+				$RTN[$key] = $this->convert_crlf( $val , $crlf );
+			}
+		}else{
+			if( !strlen( $text ) ){
+				return $text;
+			}
+			$RTN = preg_replace( '/\r\n|\r|\n/', $crlf_code, $text );
+		}
+		return $RTN;
+	}
+
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * tomk79/request core class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class request{
+	/**
+	 * 設定オブジェクト
+	 */
+	private $conf;
+	/**
+	 * ファイルシステムオブジェクト
+	 */
+	private $fs;
+	/**
+	 * URLパラメータ
+	 */
+	private $param = array();
+	/**
+	 * コマンドからのアクセス フラグ
+	 */
+	private $flg_cmd = false;
+	/**
+	 * 優先ディレクトリインデックス
+	 */
+	private $directory_index_primary;
+	/**
+	 * コマンドラインオプション
+	 */
+	private $cli_options;
+	/**
+	 * コマンドラインパラメータ
+	 */
+	private $cli_params;
+
+	/**
+	 * コンストラクタ
+	 *
+	 * @param object $conf 設定オブジェクト
+	 */
+	public function __construct($conf=null){
+		$this->conf = $conf;
+		if( !is_object($this->conf) ){
+			$this->conf = json_decode('{}');
+		}
+
+		if(!property_exists($this->conf, 'get') || !@is_array($this->conf->get)){
+			$this->conf->get = $_GET;
+		}
+		if(!property_exists($this->conf, 'post') || !@is_array($this->conf->post)){
+			$this->conf->post = $_POST;
+		}
+		if(!property_exists($this->conf, 'files') || !@is_array($this->conf->files)){
+			$this->conf->files = $_FILES;
+		}
+		if(!property_exists($this->conf, 'server') || !@is_array($this->conf->server)){
+			$this->conf->server = $_SERVER;
+		}
+		if( !array_key_exists( 'PATH_INFO' , $this->conf->server ) ){
+			$this->conf->server['PATH_INFO'] = null;
+		}
+		if( !array_key_exists( 'HTTP_USER_AGENT' , $this->conf->server ) ){
+			$this->conf->server['HTTP_USER_AGENT'] = null;
+		}
+		if( !array_key_exists( 'argv' , $this->conf->server ) ){
+			$this->conf->server['argv'] = null;
+		}
+		if(!property_exists($this->conf, 'session_name') || !@strlen($this->conf->session_name)){
+			$this->conf->session_name = 'SESSID';
+		}
+		if(!property_exists($this->conf, 'session_expire') || !@strlen($this->conf->session_expire)){
+			$this->conf->session_expire = 1800;
+		}
+		if(!property_exists($this->conf, 'directory_index_primary') || !@strlen($this->conf->directory_index_primary)){
+			$this->conf->directory_index_primary = 'index.html';
+		}
+		if(!property_exists($this->conf, 'cookie_default_path') || !@strlen($this->conf->cookie_default_path)){
+			// クッキーのデフォルトのパス
+			// session の範囲もこの設定に従う。
+			$this->conf->cookie_default_path = $this->get_path_current_dir();
+		}
+
+		$this->parse_input();
+		$this->session_start();
+	}
+
+	/**
+	 *	入力値を解析する。
+	 *
+	 * `$_GET`, `$_POST`, `$_FILES` に送られたパラメータ情報を取りまとめ、1つの連想配列としてまとめま、オブジェクト内に保持します。
+	 *
+	 * コマンドラインから実行された場合は、コマンドラインオプションをそれぞれ `=` 記号で区切り、URLパラメータ同様にパースします。
+	 *
+	 * このメソッドの処理には、入力文字コードの変換(UTF-8へ統一)などの整形処理が含まれます。
+	 *
+	 * @return bool 常に `true`
+	 */
+	private function parse_input(){
+		$this->cli_params = array();
+		$this->cli_options = array();
+
+		if( !array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+			//  コマンドラインからの実行か否か判断
+			$this->flg_cmd = true;//コマンドラインから実行しているかフラグ
+			if( is_array( $this->conf->server['argv'] ) && count( $this->conf->server['argv'] ) ){
+				$tmp_path = null;
+				for( $i = 0; count( $this->conf->server['argv'] ) > $i; $i ++ ){
+					if( preg_match( '/^\-/', $this->conf->server['argv'][$i] ) ){
+						$this->cli_params = array();//オプションの前に引数は付けられない
+						$this->cli_options[$this->conf->server['argv'][$i]] = $this->conf->server['argv'][$i+1];
+						$i ++;
+					}else{
+						array_push( $this->cli_params, $this->conf->server['argv'][$i] );
+					}
+				}
+				$tmp_path = @$this->cli_params[count($this->cli_params)-1];
+				if( preg_match( '/^\//', $tmp_path ) && @is_array($this->conf->server['argv']) ){
+					$tmp_path = array_pop( $this->conf->server['argv'] );
+					$tmp_path = parse_url($tmp_path);
+					@parse_str( $tmp_path['query'], $query );
+					if( is_array($query) ){
+						$this->conf->get = array_merge( $this->conf->get, $query );
+					}
+				}
+				unset( $tmp_path );
+			}
+		}
+
+		if( ini_get('magic_quotes_gpc') ){
+			// PHPINIのmagic_quotes_gpc設定がOnだったら、
+			// エスケープ文字を削除。
+			foreach( array_keys( $this->conf->get ) as $Line ){
+				$this->conf->get[$Line] = self::stripslashes( $this->conf->get[$Line] );
+			}
+			foreach( array_keys( $this->conf->post ) as $Line ){
+				$this->conf->post[$Line] = self::stripslashes( $this->conf->post[$Line] );
+			}
+		}
+
+		$this->conf->get = self::convert_encoding( $this->conf->get );
+		$this->conf->post = self::convert_encoding( $this->conf->post );
+		$param = array_merge( $this->conf->get , $this->conf->post );
+		$param = $this->normalize_input( $param );
+
+		if( is_array( $this->conf->files ) ){
+			$FILES_KEYS = array_keys( $this->conf->files );
+			foreach($FILES_KEYS as $Line){
+				$this->conf->files[$Line]['name'] = self::convert_encoding( $this->conf->files[$Line]['name'] );
+				$this->conf->files[$Line]['name'] = mb_convert_kana( $this->conf->files[$Line]['name'] , 'KV' , mb_internal_encoding() );
+				$param[$Line] = $this->conf->files[$Line];
+			}
+		}
+
+		$this->param = $param;
+		unset($param);
+
+		return	true;
+	}//parse_input()
+
+	/**
+	 *	入力値に対する標準的な変換処理
+	 *
+	 * @param array $param パラメータ
+	 * @return array 変換後のパラメータ
+	 */
+	private function normalize_input( $param ){
+		$is_callable_mb_check_encoding = is_callable( 'mb_check_encoding' );
+		foreach( $param as $key=>$val ){
+			// URLパラメータを加工
+			if( is_array( $val ) ){
+				// 配列なら
+				$param[$key] = $this->normalize_input( $param[$key] );
+			}elseif( is_string( $param[$key] ) ){
+				// 文字列なら
+				$param[$key] = mb_convert_kana( $param[$key] , 'KV' , mb_internal_encoding() );
+					// 半角カナは全角に統一
+				$param[$key] = preg_replace( '/\r\n|\r|\n/' , "\n" , $param[$key] );
+					// 改行コードはLFに統一
+				if( $is_callable_mb_check_encoding ){
+					// 不正なバイトコードのチェック
+					if( !mb_check_encoding( $key , mb_internal_encoding() ) ){
+						// キーの中に見つけたらパラメータごと削除
+						unset( $param[$key] );
+					}
+					if( !mb_check_encoding( $param[$key] , mb_internal_encoding() ) ){
+						// 値の中に見つけたら false に置き換える
+						$param[$key] = false;
+					}
+				}
+			}
+		}
+		return $param;
+	}//normalize_input()
+
+	/**
+	 * パラメータを取得する。
+	 *
+	 * `$_GET`, `$_POST`、`$_FILES` を合わせた連想配列の中から `$key` に当たる値を引いて返します。
+	 * キーが定義されていない場合は、`null` を返します。
+	 *
+	 * @param string $key URLパラメータ名
+	 * @return mixed URLパラメータ値
+	 */
+	public function get_param( $key ){
+		if( !array_key_exists($key, $this->param) ){ return null; }
+		return @$this->param[$key];
+	}//get_param()
+
+	/**
+	 * パラメータをセットする。
+	 *
+	 * @param string $key パラメータ名
+	 * @param mixed $val パラメータ値
+	 * @return bool 常に `true`
+	 */
+	public function set_param( $key , $val ){
+		$this->param[$key] = $val;
+		return true;
+	}//set_param()
+
+	/**
+	 * パラメータをすべて取得する。
+	 *
+	 * @return array すべてのパラメータを格納する連想配列
+	 */
+	public function get_all_params(){
+		return $this->param;
+	}
+
+	/**
+	 * コマンドラインオプションを取得する
+	 * @param string $name オプション名
+	 * @return string 指定されたオプション値
+	 */
+	public function get_cli_option( $name ){
+		if( !array_key_exists($name, $this->cli_options) ){
+			return null;
+		}
+		return @$this->cli_options[$name];
+	}
+
+	/**
+	 * すべてのコマンドラインオプションを連想配列で取得する
+	 * @return array すべてのコマンドラインオプション
+	 */
+	public function get_cli_options(){
+		return @$this->cli_options;
+	}
+
+	/**
+	 * コマンドラインパラメータを取得する
+	 * @param string $idx パラメータ番号
+	 * @return string 指定されたオプション値
+	 */
+	public function get_cli_param( $idx = 0 ){
+		if($idx < 0){
+			// マイナスのインデックスが与えられた場合、
+			// 配列の最後から数える
+			$idx = count($this->cli_params)+$idx;
+		}
+		return @$this->cli_params[$idx];
+	}
+
+	/**
+	 * すべてのコマンドラインパラメータを配列で取得する
+	 * @return array すべてのコマンドラインパラメータ
+	 */
+	public function get_cli_params(){
+		return @$this->cli_params;
+	}
+
+
+
+	// ----- cookies -----
+
+	/**
+	 * クッキー情報を取得する。
+	 *
+	 * @param string $key クッキー名
+	 * @return mixed クッキーの値
+	 */
+	public function get_cookie( $key ){
+		if( @!is_array( $_COOKIE ) ){ return null; }
+		if( @!array_key_exists($key, $_COOKIE) ){ return null; }
+		return	@$_COOKIE[$key];
+	}//get_cookie()
+
+	/**
+	 * クッキー情報をセットする。
+	 *
+	 * @param string $key クッキー名
+	 * @param string $val クッキー値
+	 * @param string $expire クッキーの有効期限
+	 * @param string $path サーバー上での、クッキーを有効としたいパス
+	 * @param string $domain クッキーが有効なドメイン
+	 * @param bool $secure クライアントからのセキュアな HTTPS 接続の場合にのみクッキーが送信されるようにします。デフォルトは `true`
+	 * @return 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function set_cookie( $key , $val , $expire = null , $path = null , $domain = null , $secure = true ){
+		if( is_null( $path ) ){
+			$path = $this->conf->cookie_default_path;
+			if( !strlen( $path ) ){
+				$path = $this->get_path_current_dir();
+			}
+			if( !strlen( $path ) ){
+				$path = '/';
+			}
+		}
+		if( !@setcookie( $key , $val , $expire , $path , $domain , $secure ) ){
+			return false;
+		}
+
+		$_COOKIE[$key] = $val;//現在の処理からも呼び出せるように
+		return true;
+	}//set_cookie()
+
+	/**
+	 * クッキー情報を削除する。
+	 *
+	 * @param string $key クッキー名
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function delete_cookie( $key ){
+		if( !@setcookie( $key , null ) ){
+			return false;
+		}
+		unset( $_COOKIE[$key] );
+		return true;
+	}//delete_cookie()
+
+
+
+	// ----- session -----
+
+	/**
+	 * セッションを開始する。
+	 *
+	 * @param string $sid セッションID。省略時、自動発行。
+	 * @return bool セッションが正常に開始した場合に `true`、それ以外の場合に `false` を返します。
+	 */
+	private function session_start( $sid = null ){
+		$expire = intval($this->conf->session_expire);
+		$cache_limiter = 'nocache';
+		$session_name = 'SESSID';
+		if( strlen( $this->conf->session_name ) ){
+			$session_name = $this->conf->session_name;
+		}
+		$path = $this->conf->cookie_default_path;
+		if( !strlen( $path ) ){
+			$path = $this->get_path_current_dir();
+		}
+		if( !strlen( $path ) ){
+			$path = '/';
+		}
+
+		@session_name( $session_name );
+		@session_cache_limiter( $cache_limiter );
+		@session_cache_expire( intval($expire/60) );
+
+		if( intval( ini_get( 'session.gc_maxlifetime' ) ) < $expire + 10 ){
+			// ガベージコレクションの生存期間が
+			// $expireよりも短い場合は、上書きする。
+			// バッファは固定値で10秒。
+			@ini_set( 'session.gc_maxlifetime' , $expire + 10 );
+		}
+
+		@session_set_cookie_params( 0 , $path );
+			//  セッションクッキー自体の寿命は定めない(=0)
+			//  そのかわり、SESSION_LAST_MODIFIED を新設し、自分で寿命を管理する。
+
+		if( strlen( $sid ) ){
+			// セッションIDに指定があれば、有効にする。
+			session_id( $sid );
+		}
+
+		// セッションを開始
+		$rtn = @session_start();
+
+		// セッションの有効期限を評価
+		if( strlen( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) && intval( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) < intval( time() - $expire ) ){
+			#	セッションの有効期限が切れていたら、セッションキーを再発行。
+			if( is_callable('session_regenerate_id') ){
+				@session_regenerate_id( true );
+			}
+		}
+		$this->set_session( 'SESSION_LAST_MODIFIED' , time() );
+		return $rtn;
+	}//session_start()
+
+	/**
+	 * セッションIDを取得する。
+	 *
+	 * @return string セッションID
+	 */
+	public function get_session_id(){
+		return session_id();
+	}//get_session_id()
+
+	/**
+	 * セッション情報を取得する。
+	 *
+	 * @param string $key セッションキー
+	 * @return mixed `$key` に対応するセッション値
+	 */
+	public function get_session( $key ){
+		if( @!is_array( $_SESSION ) ){ return null; }
+		if( @!array_key_exists($key, $_SESSION) ){ return null; }
+		return @$_SESSION[$key];
+	}//get_session()
+
+	/**
+	 * セッション情報をセットする。
+	 *
+	 * @param string $key セッションキー
+	 * @param mixed $val `$key` に対応するセッション値
+	 * @return bool 常に `true` を返します。
+	 */
+	public function set_session( $key , $val ){
+		$_SESSION[$key] = $val;
+		return true;
+	}//set_session()
+
+	/**
+	 * セッション情報を削除する。
+	 *
+	 * @param string $key セッションキー
+	 * @return bool 常に `true` を返します。
+	 */
+	public function delete_session( $key ){
+		unset( $_SESSION[$key] );
+		return true;
+	}//delete_session()
+
+
+	// ----- upload file access -----
+
+	/**
+	 * アップロードされたファイルをセッションに保存する。
+	 *
+	 * @param string $key セッションキー
+	 * @param array $ulfileinfo アップロードファイル情報
+	 * @return bool 成功時 `true`、失敗時 `false` を返します。
+	 */
+	public function save_uploadfile( $key , $ulfileinfo ){
+		// base64でエンコードして、バイナリデータを持ちます。
+		// $ulfileinfo['content'] にバイナリを格納して渡すか、
+		// $ulfileinfo['tmp_name'] または $ulfileinfo['path'] のいずれかに、
+		// アップロードファイルのパスを指定してください。
+		$fileinfo = array();
+		$fileinfo['name'] = $ulfileinfo['name'];
+		$fileinfo['type'] = $ulfileinfo['type'];
+
+		if( $ulfileinfo['content'] ){
+			$fileinfo['content'] = base64_encode( $ulfileinfo['content'] );
+		}else{
+			$filepath = '';
+			if( @is_file( $ulfileinfo['tmp_name'] ) ){
+				$filepath = $ulfileinfo['tmp_name'];
+			}elseif( @is_file( $ulfileinfo['path'] ) ){
+				$filepath = $ulfileinfo['path'];
+			}else{
+				return false;
+			}
+			$fileinfo['content'] = base64_encode( file_get_contents( $filepath ) );
+		}
+
+		if( @!is_array( $_SESSION ) ){
+			$_SESSION = array();
+		}
+		if( @!array_key_exists('FILE', $_SESSION) ){
+			$_SESSION['FILE'] = array();
+		}
+
+		$_SESSION['FILE'][$key] = $fileinfo;
+		return	true;
+	}
+	/**
+	 * セッションに保存されたファイル情報を取得する。
+	 *
+	 * @param string $key セッションキー
+	 * @return array|bool 成功時、ファイル情報 を格納した連想配列、失敗時 `false` を返します。
+	 */
+	public function get_uploadfile( $key ){
+		if(!strlen($key)){ return false; }
+		if( @!is_array( $_SESSION ) ){
+			return false;
+		}
+		if( @!array_key_exists('FILE', $_SESSION) ){
+			return false;
+		}
+		if( @!array_key_exists($key, $_SESSION['FILE']) ){
+			return false;
+		}
+
+		$rtn = @$_SESSION['FILE'][$key];
+		if( is_null( $rtn ) ){ return false; }
+
+		$rtn['content'] = base64_decode( @$rtn['content'] );
+		return	$rtn;
+	}
+	/**
+	 * セッションに保存されたファイル情報の一覧を取得する。
+	 *
+	 * @return array ファイル情報 を格納した連想配列
+	 */
+	public function get_uploadfile_list(){
+		if( @!array_key_exists('FILE', $_SESSION) ){
+			return false;
+		}
+		return	array_keys( $_SESSION['FILE'] );
+	}
+	/**
+	 * セッションに保存されたファイルを削除する。
+	 *
+	 * @param string $key セッションキー
+	 * @return bool 常に `true` を返します。
+	 */
+	public function delete_uploadfile( $key ){
+		if( @!array_key_exists('FILE', $_SESSION) ){
+			return true;
+		}
+		unset( $_SESSION['FILE'][$key] );
+		return	true;
+	}
+	/**
+	 * セッションに保存されたファイルを全て削除する。
+	 *
+	 * @return bool 常に `true` を返します。
+	 */
+	public function delete_uploadfile_all(){
+		return	$this->delete_session( 'FILE' );
+	}
+
+
+	// ----- utils -----
+
+	/**
+	 * USER_AGENT を取得する。
+	 *
+	 * @return string USER_AGENT
+	 */
+	public function get_user_agent(){
+		return @$this->conf->server['HTTP_USER_AGENT'];
+	}//get_user_agent()
+
+	/**
+	 *  SSL通信か調べる
+	 *
+	 * @return bool SSL通信の場合 `true`、それ以外の場合 `false` を返します。
+	 */
+	public function is_ssl(){
+		if( @$this->conf->server['HTTP_SSL'] || @$this->conf->server['HTTPS'] ){
+			// SSL通信が有効か否か判断
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * コマンドラインによる実行か確認する。
+	 *
+	 * @return bool コマンドからの実行の場合 `true`、ウェブからの実行の場合 `false` を返します。
+	 */
+	public function is_cmd(){
+		if( array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+			return false;
+		}
+		return	true;
+	}
+
+
+	// ----- private -----
+
+	/**
+	 * 受け取ったテキストを、指定の文字セットに変換する。
+	 *
+	 * @param mixed $text テキスト
+	 * @param string $encode 変換後の文字セット。省略時、`mb_internal_encoding()` から取得
+	 * @param string $encodefrom 変換前の文字セット。省略時、自動検出
+	 * @return string 文字セット変換後のテキスト
+	 */
+	private static function convert_encoding( $text, $encode = null, $encodefrom = null ){
+		if( !is_callable( 'mb_internal_encoding' ) ){ return $text; }
+		if( !strlen( $encodefrom ) ){ $encodefrom = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII'; }
+		if( !strlen( $encode ) ){ $encode = mb_internal_encoding(); }
+
+		if( is_array( $text ) ){
+			$rtn = array();
+			if( !count( $text ) ){ return $text; }
+			$TEXT_KEYS = array_keys( $text );
+			foreach( $TEXT_KEYS as $Line ){
+				$KEY = mb_convert_encoding( $Line , $encode , $encodefrom );
+				if( is_array( $text[$Line] ) ){
+					$rtn[$KEY] = self::convert_encoding( $text[$Line] , $encode , $encodefrom );
+				}else{
+					$rtn[$KEY] = @mb_convert_encoding( $text[$Line] , $encode , $encodefrom );
+				}
+			}
+		}else{
+			if( !strlen( $text ) ){ return $text; }
+			$rtn = @mb_convert_encoding( $text , $encode , $encodefrom );
+		}
+		return $rtn;
+	}
+
+	/**
+	 * クォートされた文字列のクォート部分を取り除く。
+	 *
+	 * この関数は、PHPの `stripslashes()` のラッパーです。
+	 * 配列を受け取ると再帰的に文字列を変換して返します。
+	 *
+	 * @param mixed $text テキスト
+	 * @return string クォートが元に戻されたテキスト
+	 */
+	private static function stripslashes( $text ){
+		if( is_array( $text ) ){
+			// 配列なら
+			foreach( $text as $key=>$val ){
+				$text[$key] = self::stripslashes( $val );
+			}
+		}elseif( is_string( $text ) ){
+			// 文字列なら
+			$text = stripslashes( $text );
+		}
+		return	$text;
+	}
+
+	/**
+	 * カレントディレクトリのパスを取得
+	 * @return string ドキュメントルートからのパス(スラッシュ閉じ)
+	 */
+	private function get_path_current_dir(){
+		//  環境変数から自動的に判断。
+		$rtn = dirname( $this->conf->server['SCRIPT_NAME'] );
+		if( !array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+			//  CUIから起動された場合
+			//  ドキュメントルートが判定できないので、
+			//  ドキュメントルート直下にあるものとする。
+			$rtn = '/';
+		}
+		$rtn = str_replace('\\','/',$rtn);
+		$rtn .= ($rtn!='/'?'/':'');
+		return $rtn;
+	}//get_path_current_dir()
+
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * login class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class login{
+	private $main;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct( $main ){
+		$this->main = $main;
+	}
+
+	/**
+	 * ログインしているか調べる
+	 */
+	public function check(){
+
+		if( !$this->main->conf()->is_login_required() ){
+			// ユーザーが設定されていなければ、ログインの評価を行わない。
+			return true;
+		}
+
+		$users = (array) $this->main->conf()->users;
+
+		$login_id = $this->main->req()->get_param('login_id');
+		$login_pw = $this->main->req()->get_param('login_pw');
+		$login_try = $this->main->req()->get_param('login_try');
+		if( strlen( $login_try ) && strlen($login_id) && strlen($login_pw) ){
+			// ログイン評価
+			if( array_key_exists($login_id, $users) && $users[$login_id] == sha1($login_pw) ){
+				$this->main->req()->set_session('rencon_ses_login_id', $login_id);
+				$this->main->req()->set_session('rencon_ses_login_pw', sha1($login_pw));
+				header('Location: ?a='.urlencode($this->main->req()->get_param('a')));
+				return true;
+			}
+		}
+
+
+		$login_id = $this->main->req()->get_session('rencon_ses_login_id');
+		$login_pw_hash = $this->main->req()->get_session('rencon_ses_login_pw');
+		if( strlen($login_id) && strlen($login_pw_hash) ){
+			// ログイン済みか評価
+			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
+				return true;
+			}
+			$this->main->req()->delete_session('rencon_ses_login_id');
+			$this->main->req()->delete_session('rencon_ses_login_pw');
+			$this->main->forbidden();
+			exit;
+		}
+
+		return false;
+	}
+
+	/**
+	 * ログイン画面を表示して終了する
+	 */
+	public function please_login(){
+		header('Content-type: text/html');
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>rencon</title>
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<link rel="stylesheet" href="?res=bootstrap4/css/bootstrap.min.css" />
+		<script src="?res=bootstrap4/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="?res=styles/common.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>rencon</h1>
+			<?php if( strlen($this->main->req()->get_param('login_try')) ){ ?>
+				<div class="alert alert-danger" role="alert">
+					<div>IDまたはパスワードが違います。</div>
+				</div>
+			<?php } ?>
+
+			<form action="?" method="post">
+ID: <input type="text" name="login_id" value="" class="form-element" />
+PW: <input type="password" name="login_pw" value="" class="form-element" />
+<input type="submit" value="Login" class="btn btn-primary" />
+<input type="hidden" name="login_try" value="1" />
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->main->req()->get_param('a')) ?>" />
+			</form>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
+		exit;
+	}
+
+	/**
+	 * ログアウトして終了する
+	 */
+	public function logout(){
+		$this->main->req()->delete_session('rencon_ses_login_id');
+		$this->main->req()->delete_session('rencon_ses_login_pw');
+
+		header('Content-type: text/html');
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>rencon</title>
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<link rel="stylesheet" href="?res=bootstrap4/css/bootstrap.min.css" />
+		<script src="?res=bootstrap4/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="?res=styles/common.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>rencon</h1>
+			<p>Logged out.</p>
+			<p><a href="?">Back to Home</a></p>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
+		exit;
 	}
 
 }

@@ -134,7 +134,7 @@ class writer {
 		}
 		$src_config_template = trim($src_config_template);
 		$src_config_template = preg_replace('/^\<\?php/', '', $src_config_template);
-		$src_config_template = preg_replace('/^\?\>/', '', $src_config_template);
+		$src_config_template = preg_replace('/\?\>$/', '', $src_config_template);
 
 
 		$src_template = '';

@@ -81,8 +81,12 @@ class app {
 				'id' => $action,
 				'title' => $controller->title,
 			);
+			$app_info = array(
+				'id' => $this->app_id,
+				'name' => $this->app_name,
+			);
 
-			$theme = new theme( $this, $page_info );
+			$theme = new theme( $this, $app_info, $page_info );
 			$html = $theme->bind( $content );
 			echo $html;
 

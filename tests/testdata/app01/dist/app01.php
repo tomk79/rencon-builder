@@ -26,7 +26,7 @@ $conf->users = array(
 	"admin" => sha1("admin"),
 );
 
-?>
+
 
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
@@ -117,8 +117,12 @@ var_dump( $_REQUEST );
 				'id' => $action,
 				'title' => $controller->title,
 			);
+			$app_info = array(
+				'id' => $this->app_id,
+				'name' => $this->app_name,
+			);
 
-			$theme = new theme( $this, $page_info );
+			$theme = new theme( $this, $app_info, $page_info );
 			$html = $theme->bind( $content );
 			echo $html;
 
@@ -2127,22 +2131,23 @@ namespace renconFramework;
  */
 class theme{
 	private $main;
-	private $app_name;
+	private $app_info;
 	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $current_page_info ){
+	public function __construct( $main, $app_info, $current_page_info ){
 		$this->main = $main;
+		$this->app_info = (object) $app_info;
 		$this->current_page_info = (object) $current_page_info;
 	}
 
 	/**
-	 * アプリケーション名を取得
+	 * アプリケーション情報を取得
 	 */
-	public function app_name(){
-		return $this->app_name;
+	public function app_info(){
+		return $this->app_info;
 	}
 
 	/**
@@ -2163,17 +2168,19 @@ class theme{
 		$class_active['active'] = $action_ary[0];
 		ob_start();
 		?><?php
+$app_info = $this->app_info();
 $current_page_info = $this->get_current_page_info();
 ?>
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
-<title><?= htmlspecialchars( $current_page_info->title ) ?></title>
+<title><?= htmlspecialchars( $app_info->name ) ?> | <?= htmlspecialchars( $current_page_info->title ) ?></title>
 <link rel="stylesheet" href="?res=theme.css" />
 </head>
 <body>
 
+<p><a href="?a="><?= htmlspecialchars( $app_info->name ) ?></a></p>
 
 <hr />
 <div class="theme-middle">

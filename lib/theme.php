@@ -8,22 +8,23 @@ namespace renconFramework;
  */
 class theme{
 	private $main;
-	private $app_name;
+	private $app_info;
 	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $current_page_info ){
+	public function __construct( $main, $app_info, $current_page_info ){
 		$this->main = $main;
+		$this->app_info = (object) $app_info;
 		$this->current_page_info = (object) $current_page_info;
 	}
 
 	/**
-	 * アプリケーション名を取得
+	 * アプリケーション情報を取得
 	 */
-	public function app_name(){
-		return $this->app_name;
+	public function app_info(){
+		return $this->app_info;
 	}
 
 	/**

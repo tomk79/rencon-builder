@@ -2358,6 +2358,8 @@ namespace tomk79\filesystem;
 
 class filesystem {}
 ?><?php
+// vendor/tomk79/filesystem/files/sample2.php
+?><?php
 namespace renconFramework;
 
 /**

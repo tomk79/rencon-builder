@@ -4,6 +4,9 @@
             "tomk79\\filesystem\\": [
                 "php"
             ]
-        }
+        },
+        "files": [
+            "files/sample2.php"
+        ]
     }
 }

@@ -35,6 +35,14 @@ class dependencies {
 			// すでにスキャン済みのパッケージならスキップ
 			return;
 		}
+		if( strtolower($this->package_name) == 'php' ){
+			// PHPのバージョン制約はスキップ
+			return;
+		}
+		if( preg_match('/^ext\-[a-z0-9\_\-]*$/i', $this->package_name) ){
+			// PHP拡張のバージョン制約はスキップ
+			return;
+		}
 
 		$path_basedir = './';
 		if( strlen($this->package_name) ){

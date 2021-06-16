@@ -2351,6 +2351,8 @@ class test {
     }
 }
 ?><?php
+// php/sample.php
+?><?php
 namespace tomk79\filesystem;
 // This is a dummy library.
 

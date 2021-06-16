@@ -7,6 +7,9 @@
             "app01\\": [
                 "src"
             ]
-        }
+        },
+        "files": [
+            "php/sample.php"
+        ]
     }
 }

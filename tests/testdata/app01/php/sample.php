@@ -1,0 +1,2 @@
+<?php
+// php/sample.php

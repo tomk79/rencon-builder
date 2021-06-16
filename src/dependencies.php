@@ -66,6 +66,11 @@ class dependencies {
 				}
 			}
 		}
+		if( property_exists( $json->autoload, 'files' ) ){
+			foreach( $json->autoload->{'files'} as $path_php_file ){
+				$this->writer->require( $this->package_name, $path_php_file );
+			}
+		}
 
 
 		// --------------------------------------

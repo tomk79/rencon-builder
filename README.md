@@ -7,6 +7,7 @@ A one filed PHP framework.
 ### tomk79/rencon-builder v0.0.2 (リリース日未定)
 
 - 依存性走査で、 `php` と `ext-*` を解決しようとしてエラーが起きていた問題を修正。
+- その他、いくつかの細かい修正。
 
 ### tomk79/rencon-builder v0.0.1 (2021年6月16日)
 

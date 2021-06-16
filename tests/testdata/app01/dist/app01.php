@@ -120,9 +120,10 @@ var_dump( $_REQUEST );
 			$app_info = array(
 				'id' => $this->app_id,
 				'name' => $this->app_name,
+				'pages' => $route,
 			);
 
-			$theme = new theme( $this, $app_info, $page_info );
+			$theme = new theme( $this, $login, $app_info, $page_info );
 			$html = $theme->bind( $content );
 			echo $html;
 
@@ -2131,14 +2132,16 @@ namespace renconFramework;
  */
 class theme{
 	private $main;
+	private $login;
 	private $app_info;
 	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $app_info, $current_page_info ){
+	public function __construct( $main, $login, $app_info, $current_page_info ){
 		$this->main = $main;
+		$this->login = $login;
 		$this->app_info = (object) $app_info;
 		$this->current_page_info = (object) $current_page_info;
 	}
@@ -2166,6 +2169,8 @@ class theme{
 			$action_ary[0] = '';
 		}
 		$class_active['active'] = $action_ary[0];
+		$login = $this->login;
+
 		ob_start();
 		?><?php
 $app_info = $this->app_info();
@@ -2182,6 +2187,13 @@ $current_page_info = $this->get_current_page_info();
 
 <p><a href="?a="><?= htmlspecialchars( $app_info->name ) ?></a></p>
 
+<ul><?php
+foreach( $app_info->pages as $pid=>$page_info ){
+    echo '<li><a href="?a='.htmlspecialchars($pid).'">'.htmlspecialchars($page_info->title).'</a></li>'."\n";
+}
+
+?></ul>
+
 <hr />
 <div class="theme-middle">
 <h1><?= nl2br( htmlspecialchars( $current_page_info->title ) ) ?></h1>
@@ -2190,11 +2202,20 @@ $current_page_info = $this->get_current_page_info();
 </div>
 </div>
 
+<hr />
+
+<?php if( $this->main->conf()->is_login_required() && $login->check() ) { ?>
+<p>
+    <a href="?a=logout">Logout</a>
+</p>
+<?php } ?>
+
 <script src="?res=theme.js"></script>
 </body>
 </html>
 <?php
 		$rtn = ob_get_clean();
+
 		return $rtn;
 	}
 }

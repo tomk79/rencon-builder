@@ -8,14 +8,16 @@ namespace renconFramework;
  */
 class theme{
 	private $main;
+	private $login;
 	private $app_info;
 	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $app_info, $current_page_info ){
+	public function __construct( $main, $login, $app_info, $current_page_info ){
 		$this->main = $main;
+		$this->login = $login;
 		$this->app_info = (object) $app_info;
 		$this->current_page_info = (object) $current_page_info;
 	}
@@ -43,9 +45,12 @@ class theme{
 			$action_ary[0] = '';
 		}
 		$class_active['active'] = $action_ary[0];
+		$login = $this->login;
+
 		ob_start();
 		?>/* theme template */<?php
 		$rtn = ob_get_clean();
+
 		return $rtn;
 	}
 }

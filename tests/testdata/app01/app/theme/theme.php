@@ -13,6 +13,13 @@ $current_page_info = $this->get_current_page_info();
 
 <p><a href="?a="><?= htmlspecialchars( $app_info->name ) ?></a></p>
 
+<ul><?php
+foreach( $app_info->pages as $pid=>$page_info ){
+    echo '<li><a href="?a='.htmlspecialchars($pid).'">'.htmlspecialchars($page_info->title).'</a></li>'."\n";
+}
+
+?></ul>
+
 <hr />
 <div class="theme-middle">
 <h1><?= nl2br( htmlspecialchars( $current_page_info->title ) ) ?></h1>
@@ -20,6 +27,14 @@ $current_page_info = $this->get_current_page_info();
 <?= $content ?>
 </div>
 </div>
+
+<hr />
+
+<?php if( $this->main->conf()->is_login_required() && $login->check() ) { ?>
+<p>
+    <a href="?a=logout">Logout</a>
+</p>
+<?php } ?>
 
 <script src="?res=theme.js"></script>
 </body>

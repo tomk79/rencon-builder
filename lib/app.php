@@ -84,9 +84,10 @@ class app {
 			$app_info = array(
 				'id' => $this->app_id,
 				'name' => $this->app_name,
+				'pages' => $route,
 			);
 
-			$theme = new theme( $this, $app_info, $page_info );
+			$theme = new theme( $this, $login, $app_info, $page_info );
 			$html = $theme->bind( $content );
 			echo $html;
 

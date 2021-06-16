@@ -8,6 +8,7 @@ namespace renconFramework;
  */
 class login{
 	private $main;
+	private $app_id = '<!-- app_id -->';
 
 	/**
 	 * Constructor
@@ -34,23 +35,23 @@ class login{
 		if( strlen( $login_try ) && strlen($login_id) && strlen($login_pw) ){
 			// ログイン評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == sha1($login_pw) ){
-				$this->main->req()->set_session('rencon_ses_login_id', $login_id);
-				$this->main->req()->set_session('rencon_ses_login_pw', sha1($login_pw));
+				$this->main->req()->set_session($this->app_id.'_ses_login_id', $login_id);
+				$this->main->req()->set_session($this->app_id.'_ses_login_pw', sha1($login_pw));
 				header('Location: ?a='.urlencode($this->main->req()->get_param('a')));
 				return true;
 			}
 		}
 
 
-		$login_id = $this->main->req()->get_session('rencon_ses_login_id');
-		$login_pw_hash = $this->main->req()->get_session('rencon_ses_login_pw');
+		$login_id = $this->main->req()->get_session($this->app_id.'_ses_login_id');
+		$login_pw_hash = $this->main->req()->get_session($this->app_id.'_ses_login_pw');
 		if( strlen($login_id) && strlen($login_pw_hash) ){
 			// ログイン済みか評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 				return true;
 			}
-			$this->main->req()->delete_session('rencon_ses_login_id');
-			$this->main->req()->delete_session('rencon_ses_login_pw');
+			$this->main->req()->delete_session($this->app_id.'_ses_login_id');
+			$this->main->req()->delete_session($this->app_id.'_ses_login_pw');
 			$this->main->forbidden();
 			exit;
 		}
@@ -104,8 +105,8 @@ PW: <input type="password" name="login_pw" value="" class="form-element" />
 	 * ログアウトして終了する
 	 */
 	public function logout(){
-		$this->main->req()->delete_session('rencon_ses_login_id');
-		$this->main->req()->delete_session('rencon_ses_login_pw');
+		$this->main->req()->delete_session($this->app_id.'_ses_login_id');
+		$this->main->req()->delete_session($this->app_id.'_ses_login_pw');
 
 		header('Content-type: text/html');
 		ob_start();

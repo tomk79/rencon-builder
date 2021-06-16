@@ -9,6 +9,9 @@ class writer {
 	/** $renconBuilderJson */
 	private $renconBuilderJson;
 
+	/** app_id */
+	private $app_id;
+
 	/** version */
 	private $version;
 
@@ -44,6 +47,13 @@ class writer {
 	 */
 	public function set_appname($appname){
 		$this->appname = $appname;
+	}
+
+	/**
+	 * アプリケーションIDをセット
+	 */
+	public function set_app_id($app_id){
+		$this->app_id = $app_id;
 	}
 
 	/**
@@ -122,15 +132,23 @@ class writer {
 		}
 
 		$framework = $framework_files->get('framework');
-		$framework = str_replace('<!-- appname -->', $this->appname.' v'.$this->version, $framework);
+		$framework = str_replace('<!-- appname -->', $this->appname, $framework);
+		$framework = str_replace('<!-- app_id -->', $this->app_id, $framework);
+		$framework = str_replace('<!-- version -->', $this->version, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
 		$framework = str_replace('/* theme template */', $src_theme, $framework);
-
 		$rtn .= $framework;
+
+
 		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
-		$rtn .= $framework_files->get('login');
+
+
+		$src_login .= $framework_files->get('login');
+		$src_login = str_replace('<!-- appname -->', $this->appname, $src_login);
+		$src_login = str_replace('<!-- app_id -->', $this->app_id, $src_login);
+		$rtn .= $src_login;
 
 		foreach( $this->require_files as $package_name => $files ){
 			foreach( $files as $file ){
@@ -144,9 +162,10 @@ class writer {
 			}
 		}
 
-		$resourceMgr = $framework_files->get('resources');
-		$resourceMgr = str_replace('/* function resource() */', $src_function_resource, $resourceMgr);
-		$rtn .= $resourceMgr;
+
+		$src_resourceMgr = $framework_files->get('resources');
+		$src_resourceMgr = str_replace('/* function resource() */', $src_function_resource, $src_resourceMgr);
+		$rtn .= $src_resourceMgr;
 
 		return $this->utils->fs()->save_file( $this->renconBuilderJson->dist, $rtn );
 	}

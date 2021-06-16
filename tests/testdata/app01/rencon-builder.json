@@ -1,4 +1,6 @@
 {
+    "name": "Application Sample",
+    "app_id": "app01",
     "dist": "dist/app01.php",
     "resources": "resources/",
     "route": {

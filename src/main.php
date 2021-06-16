@@ -54,7 +54,16 @@ class main {
 
 		$this->writer = new writer($this->utils, $renconBuilderJson);
 		$this->writer->set_version( $this->version );
-		$this->writer->set_appname( $composerJson->name );
+		$app_name = $renconBuilderJson->name;
+		if( !strlen($app_name) ){
+			$app_name = $composerJson->name;
+		}
+		$this->writer->set_appname( $app_name );
+		$app_id = $renconBuilderJson->app_id;
+		if( !strlen($app_id) ){
+			$app_id = preg_replace('/^.*\/(.*?)$/', '$1', $composerJson->name);
+		}
+		$this->writer->set_app_id( $app_id );
 
 
 
@@ -103,6 +112,12 @@ class main {
 	 * rencon-builder.json の内容を正規化する
 	 */
 	private function normalize_rencon_builder_json( $json ){
+		if( !property_exists( $json, 'name' ) ){
+			$json->name = false;
+		}
+		if( !property_exists( $json, 'app_id' ) ){
+			$json->app_id = false;
+		}
 		if( !property_exists( $json, 'dist' ) ){
 			$json->dist = false;
 		}

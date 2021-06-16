@@ -25,7 +25,7 @@ class framework {
 
 	private $conf;
 	public function __construct($conf){
-		$this->conf = $conf;
+		$this->conf = new conf( $conf );
 	}
 
 	public function run(){
@@ -108,9 +108,7 @@ class framework {
 
 	public function theme( $contents ){
 		ob_start();
-?>
-/* theme template */
-<?php
+?>/* theme template */<?php
 		$html = ob_get_clean();
 		return $html;
 	}

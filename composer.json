@@ -12,8 +12,8 @@
     ],
     "scripts":{
         "build": [
-            "php ./build/build.php",
-            "php ./box.phar build"
+            "php ./build/pre-build.php",
+            "php ./build/box.phar build"
         ],
         "test": [
             "php ./vendor/phpunit/phpunit/phpunit"

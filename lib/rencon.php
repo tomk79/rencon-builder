@@ -37,6 +37,7 @@ class rencon {
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function resources(){ return $this->resources; }
 
 	public function run(){
 		$route = array(

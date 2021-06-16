@@ -8,6 +8,7 @@ A one filed PHP framework.
 
 - 依存性走査で、 `php` と `ext-*` を解決しようとしてエラーが起きていた問題を修正。
 - テーマとコンテンツから、 `$rencon` の名前でアクセスできるようになった。
+- `$rencon->resources()` を追加した。
 - その他、いくつかの細かい修正。
 
 ### tomk79/rencon-builder v0.0.1 (2021年6月16日)

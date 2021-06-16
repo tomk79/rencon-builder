@@ -31,10 +31,10 @@ $conf->users = array(
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
 
-$app = new app( $conf );
-$app->run();
+$rencon = new rencon( $conf );
+$rencon->run();
 
-class app {
+class rencon {
 
 	private $conf;
 	private $fs;
@@ -61,6 +61,7 @@ class app {
 '' => (object) array(
 	"title" => 'Home',
 	"page" => function(){ ?>
+$rencon = $this;
 <p>トップページ</p>
 
 <p><?php
@@ -2153,6 +2154,7 @@ class theme{
 			$action_ary[0] = '';
 		}
 		$class_active['active'] = $action_ary[0];
+		$rencon = $this->main;
 		$login = $this->login;
 
 		ob_start();

@@ -8,7 +8,7 @@ $src .= ''."\n";
 $src .= 'class framework_files {'."\n";
 $src .= '   public function get( $className ) {'."\n";
 $src .= '       $files = array('."\n";
-$src .= '           "app" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/app.php' ) ) ), true).','."\n";
+$src .= '           "rencon" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/rencon.php' ) ) ), true).','."\n";
 $src .= '           "conf" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/conf.php' ) ) ), true).','."\n";
 $src .= '           "filesystem" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/filesystem.php' ) ) ), true).','."\n";
 $src .= '           "request" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/request.php' ) ) ), true).','."\n";

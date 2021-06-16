@@ -116,6 +116,7 @@ class writer {
 				$src_route .= '	"title" => '.var_export($func_name->title, true).','."\n";
 				if( is_file( $func_name->page ) ){
 					$src_route .= '	"page" => function(){ ?'.'>'."\n";
+					$src_route .= '$rencon = $this;'."\n";
 					$src_route .= file_get_contents( $func_name->page );
 					$src_route .= '<'.'?php return; },'."\n";
 				}else{
@@ -143,7 +144,7 @@ class writer {
 		}
 
 
-		$framework = $framework_files->get('app');
+		$framework = $framework_files->get('rencon');
 		$framework = str_replace('<!-- app_name -->', $this->app_name, $framework);
 		$framework = str_replace('<!-- app_id -->', $this->app_id, $framework);
 		$framework = str_replace('<!-- version -->', $this->version, $framework);

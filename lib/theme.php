@@ -45,6 +45,7 @@ class theme{
 			$action_ary[0] = '';
 		}
 		$class_active['active'] = $action_ary[0];
+		$rencon = $this->main;
 		$login = $this->login;
 
 		ob_start();

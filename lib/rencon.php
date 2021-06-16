@@ -14,10 +14,10 @@ namespace renconFramework;
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
 
-$app = new app( $conf );
-$app->run();
+$rencon = new rencon( $conf );
+$rencon->run();
 
-class app {
+class rencon {
 
 	private $conf;
 	private $fs;

@@ -7,6 +7,7 @@ A one filed PHP framework.
 ### tomk79/rencon-builder v0.0.3 (リリース日未定)
 
 - `middleware` がセットされていない場合にエラーが起きる不具合を修正。
+- `rencon-builder.json` に `version` を追加。
 
 ### tomk79/rencon-builder v0.0.2 (2021年6月17日)
 

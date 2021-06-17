@@ -51,9 +51,13 @@ class main {
 			$renconBuilderJson->dist = preg_replace('/^.*\/(.*?)$/', '$1', $renconBuilderJson->dist).'.phar';
 		}
 
+		$version = '--.--.--';
+		if( $renconBuilderJson->version ){
+			$version = trim( $renconBuilderJson->version );
+		}
 
 		$this->writer = new writer($this->utils, $renconBuilderJson);
-		$this->writer->set_version( $this->version );
+		$this->writer->set_version( $version );
 		$app_name = $renconBuilderJson->name;
 		if( !strlen($app_name) ){
 			$app_name = $composerJson->name;
@@ -117,6 +121,9 @@ class main {
 		}
 		if( !property_exists( $json, 'app_id' ) ){
 			$json->app_id = false;
+		}
+		if( !property_exists( $json, 'version' ) ){
+			$json->version = false;
 		}
 		if( !property_exists( $json, 'dist' ) ){
 			$json->dist = false;

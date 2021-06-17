@@ -130,6 +130,9 @@ class main {
 		if( !property_exists( $json, 'theme' ) ){
 			$json->theme = false;
 		}
+		if( !property_exists( $json, 'middleware' ) ){
+			$json->middleware = false;
+		}
 		return $json;
 	}
 

@@ -1,7 +1,7 @@
 <?php
 /* ---------------------
 
-  Application Sample v0.0.2
+  Application Sample v0.0.3-alpha.1+dev
 
 --------------------- */
 

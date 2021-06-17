@@ -180,6 +180,8 @@ class writer {
 		$src_middleware = '';
 		if( $this->renconBuilderJson->middleware ){
 			$src_middleware .= var_export($this->renconBuilderJson->middleware, true);
+		}else{
+			$src_middleware .= 'array()';
 		}
 
 		$src_template = '';

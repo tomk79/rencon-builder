@@ -121,17 +121,22 @@ var_dump( $_REQUEST );
 		// --------------------------------------
 		// ログイン処理
 		$login = new login($this, $app_info);
+
+		if( $action == 'logout' ){
+			$login->logout();
+			exit;
+		}
+
 		if( !$login->check() ){
-			if( $action == 'logout' ){
+			if( $action == 'logout' || $action == 'login' ){
 				$this->req()->set_param('a', null);
 			}
 			$login->please_login();
 			exit;
 		}
 
-		if( $action == 'logout' ){
-			$login->logout();
-			exit;
+		if( $action == 'logout' || $action == 'login' ){
+			$this->req()->set_param('a', null);
 		}
 
 		// --------------------------------------
@@ -164,8 +169,37 @@ var_dump( $_REQUEST );
 			$html = $this->theme()->bind( $content );
 			echo $html;
 
+		}else{
+			$this->notfound();
 		}
 		exit();
+	}
+
+
+	/**
+	 * Not Found ページを表示して終了する
+	 */
+	public function notfound(){
+		$page_info['title'] = 'Not Found';
+		$this->theme()->set_current_page_info( $page_info );
+
+		$content = '<p>404: Not Found</p>';
+		$html = $this->theme()->bind( $content );
+		echo $html;
+		exit;
+	}
+
+	/**
+	 * Forbidden ページを表示して終了する
+	 */
+	public function forbidden(){
+		$page_info['title'] = 'Forbidden';
+		$this->theme()->set_current_page_info( $page_info );
+
+		$content = '<p>403: Forbidden</p>';
+		$html = $this->theme()->bind( $content );
+		echo $html;
+		exit;
 	}
 
 }

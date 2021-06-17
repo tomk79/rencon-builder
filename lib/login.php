@@ -67,6 +67,9 @@ class login{
 	 */
 	public function please_login(){
 		header('Content-type: text/html');
+
+/* route:login */
+
 		ob_start();
 		?>
 <!doctype html>
@@ -107,6 +110,8 @@ PW: <input type="password" name="login_pw" value="" class="form-element" />
 	public function logout(){
 		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
 		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
+
+/* route:logout */
 
 		header('Content-type: text/html');
 		ob_start();

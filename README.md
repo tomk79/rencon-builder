@@ -10,6 +10,9 @@ A one filed PHP framework.
 - 依存性走査で、 `autoload->files` に対応。
 - テーマとコンテンツから、 `$rencon` の名前でアクセスできるようになった。
 - `$rencon->resources()` を追加した。
+- `$rencon->user()` を追加した。
+- `$rencon->app_id()` を追加した。
+- `$rencon->app_name()` を追加した。
 - その他、いくつかの細かい修正。
 
 ### tomk79/rencon-builder v0.0.1 (2021年6月16日)

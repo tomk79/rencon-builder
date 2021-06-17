@@ -39,6 +39,8 @@ class rencon {
 	private $conf;
 	private $fs;
 	private $req;
+	private $user;
+	private $theme;
 	private $resources;
 
 	private $app_id = 'app01';
@@ -48,13 +50,19 @@ class rencon {
 		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
+		$this->user = new user($this);
 		$this->resources = new resources($this);
 	}
 
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function user(){ return $this->user; }
+	public function theme(){ return $this->theme; }
 	public function resources(){ return $this->resources; }
+
+	public function app_id(){ return $this->app_id; }
+	public function app_name(){ return $this->app_name; }
 
 	public function run(){
 		$route = array(
@@ -91,6 +99,11 @@ var_dump( $_REQUEST );
 			'name' => $this->app_name,
 			'pages' => $route,
 		);
+		$page_info = array(
+			'id' => $action,
+			'title' => 'Home',
+		);
+		$this->theme = new theme( $this, $app_info, $page_info );
 
 		if( strlen($resource) ){
 			header("Content-type: ".$this->resources->get_mime_type($resource));
@@ -116,17 +129,14 @@ var_dump( $_REQUEST );
 
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
+			$page_info['title'] = $controller->title;
+
 			ob_start();
 			call_user_func($controller->page);
 			$content = ob_get_clean();
 
-			$page_info = array(
-				'id' => $action,
-				'title' => $controller->title,
-			);
 
-			$theme = new theme( $this, $login, $app_info, $page_info );
-			$html = $theme->bind( $content );
+			$html = $this->theme()->bind( $content );
 			echo $html;
 
 		}
@@ -2112,24 +2122,65 @@ class request{
 namespace renconFramework;
 
 /**
+ * user class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class user{
+	private $rencon;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct( $rencon ){
+		$this->rencon = $rencon;
+	}
+
+	/**
+	 * ログインしているか
+	 */
+	public function is_login(){
+		$login_id = $this->get_user_id();
+		return !!strlen($login_id);
+	}
+
+	/**
+	 * ユーザーIDを取得
+	 */
+	public function get_user_id(){
+		$login_id = $this->rencon->req()->get_session($this->rencon->app_id().'_ses_login_id');
+		return $login_id;
+	}
+
+}
+?><?php
+namespace renconFramework;
+
+/**
  * theme class
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
 class theme{
-	private $main;
-	private $login;
+	private $rencon;
 	private $app_info;
 	private $current_page_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $login, $app_info, $current_page_info ){
-		$this->main = $main;
-		$this->login = $login;
+	public function __construct( $rencon, $app_info, $current_page_info = array() ){
+		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
 		$this->current_page_info = (object) $current_page_info;
+	}
+
+	/**
+	 * ページ情報
+	 */
+	public function set_current_page_info( $page_info ){
+		$this->current_page_info = (object) array_merge((array) $this->current_page_info, (array) $page_info);
+		return true;
 	}
 
 	/**
@@ -2150,13 +2201,12 @@ class theme{
 	 * テーマにコンテンツを包んで返す
 	 */
 	public function bind( $content ){
-		$action_ary = explode('.', $this->main->req()->get_param('a'));
+		$action_ary = explode('.', $this->rencon->req()->get_param('a'));
 		if( !is_array($action_ary) || !count($action_ary) ){
 			$action_ary[0] = '';
 		}
 		$class_active['active'] = $action_ary[0];
-		$rencon = $this->main;
-		$login = $this->login;
+		$rencon = $this->rencon;
 
 		ob_start();
 		?><?php
@@ -2191,7 +2241,7 @@ foreach( $app_info->pages as $pid=>$page_info ){
 
 <hr />
 
-<?php if( $this->main->conf()->is_login_required() && $login->check() ) { ?>
+<?php if( $rencon->conf()->is_login_required() && $rencon->user()->is_login() ) { ?>
 <p>
     <a href="?a=logout">Logout</a>
 </p>
@@ -2215,15 +2265,14 @@ namespace renconFramework;
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
 class login{
-	private $main;
-	private $app_id = 'app01';
+	private $rencon;
 	private $app_info;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $main, $app_info ){
-		$this->main = $main;
+	public function __construct( $rencon, $app_info ){
+		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
 	}
 
@@ -2232,37 +2281,39 @@ class login{
 	 */
 	public function check(){
 
-		if( !$this->main->conf()->is_login_required() ){
+		if( !$this->rencon->conf()->is_login_required() ){
 			// ユーザーが設定されていなければ、ログインの評価を行わない。
 			return true;
 		}
 
-		$users = (array) $this->main->conf()->users;
+		$users = (array) $this->rencon->conf()->users;
+		$ses_id = $this->rencon->app_id().'_ses_login_id';
+		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
 
-		$login_id = $this->main->req()->get_param('login_id');
-		$login_pw = $this->main->req()->get_param('login_pw');
-		$login_try = $this->main->req()->get_param('login_try');
+		$login_id = $this->rencon->req()->get_param('login_id');
+		$login_pw = $this->rencon->req()->get_param('login_pw');
+		$login_try = $this->rencon->req()->get_param('login_try');
 		if( strlen( $login_try ) && strlen($login_id) && strlen($login_pw) ){
 			// ログイン評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == sha1($login_pw) ){
-				$this->main->req()->set_session($this->app_id.'_ses_login_id', $login_id);
-				$this->main->req()->set_session($this->app_id.'_ses_login_pw', sha1($login_pw));
-				header('Location: ?a='.urlencode($this->main->req()->get_param('a')));
+				$this->rencon->req()->set_session($ses_id, $login_id);
+				$this->rencon->req()->set_session($ses_pw, sha1($login_pw));
+				header('Location: ?a='.urlencode($this->rencon->req()->get_param('a')));
 				return true;
 			}
 		}
 
 
-		$login_id = $this->main->req()->get_session($this->app_id.'_ses_login_id');
-		$login_pw_hash = $this->main->req()->get_session($this->app_id.'_ses_login_pw');
+		$login_id = $this->rencon->req()->get_session($ses_id);
+		$login_pw_hash = $this->rencon->req()->get_session($ses_pw);
 		if( strlen($login_id) && strlen($login_pw_hash) ){
 			// ログイン済みか評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 				return true;
 			}
-			$this->main->req()->delete_session($this->app_id.'_ses_login_id');
-			$this->main->req()->delete_session($this->app_id.'_ses_login_pw');
-			$this->main->forbidden();
+			$this->rencon->req()->delete_session($ses_id);
+			$this->rencon->req()->delete_session($ses_pw);
+			$this->rencon->forbidden();
 			exit;
 		}
 
@@ -2286,7 +2337,7 @@ class login{
 	<body>
 		<div class="container">
 			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
-			<?php if( strlen($this->main->req()->get_param('login_try')) ){ ?>
+			<?php if( strlen($this->rencon->req()->get_param('login_try')) ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div>IDまたはパスワードが違います。</div>
 				</div>
@@ -2297,7 +2348,7 @@ ID: <input type="text" name="login_id" value="" class="form-element" />
 PW: <input type="password" name="login_pw" value="" class="form-element" />
 <input type="submit" value="Login" class="btn btn-primary" />
 <input type="hidden" name="login_try" value="1" />
-<input type="hidden" name="a" value="<?= htmlspecialchars($this->main->req()->get_param('a')) ?>" />
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a')) ?>" />
 			</form>
 		</div>
 	</body>
@@ -2312,8 +2363,8 @@ PW: <input type="password" name="login_pw" value="" class="form-element" />
 	 * ログアウトして終了する
 	 */
 	public function logout(){
-		$this->main->req()->delete_session($this->app_id.'_ses_login_id');
-		$this->main->req()->delete_session($this->app_id.'_ses_login_pw');
+		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
+		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
 
 		header('Content-type: text/html');
 		ob_start();

@@ -12,6 +12,7 @@ $src .= '           "rencon" => '.var_export(base64_encode( trim( file_get_conte
 $src .= '           "conf" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/conf.php' ) ) ), true).','."\n";
 $src .= '           "filesystem" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/filesystem.php' ) ) ), true).','."\n";
 $src .= '           "request" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/request.php' ) ) ), true).','."\n";
+$src .= '           "user" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/user.php' ) ) ), true).','."\n";
 $src .= '           "login" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/login.php' ) ) ), true).','."\n";
 $src .= '           "resources" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/resources.php' ) ) ), true).','."\n";
 $src .= '           "theme" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/theme.php' ) ) ), true).','."\n";

@@ -157,6 +157,7 @@ class writer {
 		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
+		$rtn .= $framework_files->get('user');
 
 		$src_theme = $framework_files->get('theme');
 		$src_theme = str_replace('/* theme template */', $src_template, $src_theme);

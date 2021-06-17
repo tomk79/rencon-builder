@@ -8,6 +8,7 @@ A one filed PHP framework.
 
 - 依存性走査で、 `php` と `ext-*` を解決しようとしてエラーが起きていた問題を修正。
 - 依存性走査で、 `autoload->files` に対応。
+- `rencon-builder.json` に `middleware` を追加。
 - テーマとコンテンツから、 `$rencon` の名前でアクセスできるようになった。
 - `$rencon->resources()` を追加した。
 - `$rencon->user()` を追加した。

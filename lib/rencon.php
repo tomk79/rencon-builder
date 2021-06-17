@@ -48,6 +48,8 @@ class rencon {
 	public function app_name(){ return $this->app_name; }
 
 	public function run(){
+		header('Content-type: text/html'); // default
+
 		$route = array(
 
 /* router */
@@ -68,6 +70,8 @@ class rencon {
 		);
 		$this->theme = new theme( $this, $app_info, $page_info );
 
+		// --------------------------------------
+		// リソースへのリクエストを処理
 		if( strlen($resource) ){
 			header("Content-type: ".$this->resources->get_mime_type($resource));
 			$bin = $this->resources->get($resource);
@@ -76,10 +80,13 @@ class rencon {
 
 		}
 
-		header('Content-type: text/html'); // default
-
+		// --------------------------------------
+		// ログイン処理
 		$login = new login($this, $app_info);
 		if( !$login->check() ){
+			if( $action == 'logout' ){
+				$this->req()->set_param('a', null);
+			}
 			$login->please_login();
 			exit;
 		}
@@ -89,13 +96,28 @@ class rencon {
 			exit;
 		}
 
+		// --------------------------------------
+		// middleware
 
+		$middleware = array(/* middleware */);
+
+		foreach( $middleware as $method ){
+			list( $className, $funcName ) = explode('::', $method);
+			$tmp_obj = new $className();
+			call_user_func( array($tmp_obj, $funcName), $this );
+		}
+
+
+
+		// --------------------------------------
+		// コンテンツを処理
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
 			$page_info['title'] = $controller->title;
+			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
-			call_user_func($controller->page);
+			call_user_func( $controller->page );
 			$content = ob_get_clean();
 
 

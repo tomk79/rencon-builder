@@ -13,6 +13,9 @@
             "page": "app01\\test::start"
         }
     },
+    "middleware": [
+        "app01\\middleware\\sample::middleware"
+    ],
     "theme": "app/theme/theme.php",
     "config_template": "app/config.php"
 }

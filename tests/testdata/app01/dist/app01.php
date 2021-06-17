@@ -65,6 +65,8 @@ class rencon {
 	public function app_name(){ return $this->app_name; }
 
 	public function run(){
+		header('Content-type: text/html'); // default
+
 		$route = array(
 
 '' => (object) array(
@@ -77,6 +79,7 @@ $rencon = $this; ?>
 var_dump( $_REQUEST );
 ?></p>
 
+<p>middleware の処理を<a href="?middleware=1">確認する</a>。</p>
 
 <p><img src="?res=images/sample-png.png" /></p>
 <p><img src="?res=images/sample-jpeg.jpg" /></p>
@@ -105,6 +108,8 @@ var_dump( $_REQUEST );
 		);
 		$this->theme = new theme( $this, $app_info, $page_info );
 
+		// --------------------------------------
+		// リソースへのリクエストを処理
 		if( strlen($resource) ){
 			header("Content-type: ".$this->resources->get_mime_type($resource));
 			$bin = $this->resources->get($resource);
@@ -113,10 +118,13 @@ var_dump( $_REQUEST );
 
 		}
 
-		header('Content-type: text/html'); // default
-
+		// --------------------------------------
+		// ログイン処理
 		$login = new login($this, $app_info);
 		if( !$login->check() ){
+			if( $action == 'logout' ){
+				$this->req()->set_param('a', null);
+			}
 			$login->please_login();
 			exit;
 		}
@@ -126,13 +134,30 @@ var_dump( $_REQUEST );
 			exit;
 		}
 
+		// --------------------------------------
+		// middleware
 
+		$middleware = array (
+  0 => 'app01\\middleware\\sample::middleware',
+);
+
+		foreach( $middleware as $method ){
+			list( $className, $funcName ) = explode('::', $method);
+			$tmp_obj = new $className();
+			call_user_func( array($tmp_obj, $funcName), $this );
+		}
+
+
+
+		// --------------------------------------
+		// コンテンツを処理
 		if( array_key_exists( $action, $route ) ){
 			$controller = $route[$action];
 			$page_info['title'] = $controller->title;
+			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
-			call_user_func($controller->page);
+			call_user_func( $controller->page );
 			$content = ob_get_clean();
 
 
@@ -2390,6 +2415,26 @@ PW: <input type="password" name="login_pw" value="" class="form-element" />
 		exit;
 	}
 
+}
+?><?php
+namespace app01\middleware;
+class sample {
+    public function middleware( $rencon ){
+        if( !$rencon->req()->get_param('middleware') ){
+            return;
+        }
+
+
+        ob_start();
+?>
+
+<p>パラメータ <code>middleware</code> に <code><?= htmlspecialchars($rencon->req()->get_param('middleware')) ?></code> がセットされました。</p>
+
+<?php
+        $src = ob_get_clean();
+        echo $rencon->theme()->bind($src);
+        exit;
+    }
 }
 ?><?php
 

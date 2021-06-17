@@ -138,6 +138,11 @@ class writer {
 		$src_config_template = preg_replace('/\?\>$/', '', $src_config_template);
 
 
+		$src_middleware = '';
+		if( $this->renconBuilderJson->middleware ){
+			$src_middleware .= var_export($this->renconBuilderJson->middleware, true);
+		}
+
 		$src_template = '';
 		if( $this->renconBuilderJson->theme ){
 			$src_template .= file_get_contents( $this->renconBuilderJson->theme );
@@ -150,6 +155,7 @@ class writer {
 		$framework = str_replace('<!-- version -->', $this->version, $framework);
 		$framework = str_replace('/*-- config --*/', $src_config_template, $framework);
 		$framework = str_replace('/* router */', $src_route, $framework);
+		$framework = str_replace('array(/* middleware */)', $src_middleware, $framework);
 		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;
 

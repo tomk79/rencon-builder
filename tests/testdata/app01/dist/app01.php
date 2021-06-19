@@ -111,9 +111,7 @@ var_dump( $_REQUEST );
 		// --------------------------------------
 		// リソースへのリクエストを処理
 		if( strlen($resource) ){
-			header("Content-type: ".$this->resources->get_mime_type($resource));
-			$bin = $this->resources->get($resource);
-			echo $bin;
+			$this->resources->echo_resource( $resource );
 			exit();
 
 		}

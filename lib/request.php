@@ -1,4 +1,10 @@
 <?php
+/**
+ * tomk79/request
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+
 namespace renconFramework;
 
 /**
@@ -24,6 +30,10 @@ class request{
 	 */
 	private $flg_cmd = false;
 	/**
+	 * リクエストファイルパス
+	 */
+	private $request_file_path;
+	/**
 	 * 優先ディレクトリインデックス
 	 */
 	private $directory_index_primary;
@@ -46,6 +56,7 @@ class request{
 		if( !is_object($this->conf) ){
 			$this->conf = json_decode('{}');
 		}
+		$this->fs = new filesystem();
 
 		if(!property_exists($this->conf, 'get') || !@is_array($this->conf->get)){
 			$this->conf->get = $_GET;
@@ -99,6 +110,10 @@ class request{
 	 * @return bool 常に `true`
 	 */
 	private function parse_input(){
+		$this->request_file_path = $this->conf->server['PATH_INFO'];
+		if( !strlen($this->request_file_path) ){
+			$this->request_file_path = '/';
+		}
 		$this->cli_params = array();
 		$this->cli_options = array();
 
@@ -120,6 +135,7 @@ class request{
 				if( preg_match( '/^\//', $tmp_path ) && @is_array($this->conf->server['argv']) ){
 					$tmp_path = array_pop( $this->conf->server['argv'] );
 					$tmp_path = parse_url($tmp_path);
+					$this->request_file_path = $tmp_path['path'];
 					@parse_str( $tmp_path['query'], $query );
 					if( is_array($query) ){
 						$this->conf->get = array_merge( $this->conf->get, $query );
@@ -156,6 +172,12 @@ class request{
 
 		$this->param = $param;
 		unset($param);
+
+		if (preg_match('/\/$/', $this->request_file_path)) {
+			$this->request_file_path .= $this->conf->directory_index_primary;
+		}
+		$this->request_file_path = $this->fs->get_realpath( $this->request_file_path );
+		$this->request_file_path = $this->fs->normalize_path( $this->request_file_path );
 
 		return	true;
 	}//parse_input()
@@ -545,6 +567,15 @@ class request{
 	public function get_user_agent(){
 		return @$this->conf->server['HTTP_USER_AGENT'];
 	}//get_user_agent()
+
+	/**
+	 * リクエストパスを取得する。
+	 *
+	 * @return string リクエストパス
+	 */
+	public function get_request_file_path(){
+		return $this->request_file_path;
+	}//get_request_file_path()
 
 	/**
 	 *  SSL通信か調べる

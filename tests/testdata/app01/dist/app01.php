@@ -263,6 +263,12 @@ class conf{
 
 }
 ?><?php
+/**
+ * tomk79/filesystem
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+
 namespace renconFramework;
 
 /**
@@ -311,10 +317,10 @@ class filesystem{
 	public function is_writable( $path ){
 		$path = $this->localize_path($path);
 		if( !$this->is_file($path) ){
-			return @is_writable( dirname($path) );
+			return is_writable( dirname($path) );
 		}
-		return @is_writable( $path );
-	}//is_writable()
+		return is_writable( $path );
+	} // is_writable()
 
 	/**
 	 * 読み込んでよいアイテムか検証する。
@@ -324,7 +330,7 @@ class filesystem{
 	 */
 	public function is_readable( $path ){
 		$path = $this->localize_path($path);
-		return @is_readable( $path );
+		return is_readable( $path );
 	}//is_readable()
 
 	/**
@@ -335,7 +341,7 @@ class filesystem{
 	 */
 	public function is_file( $path ){
 		$path = $this->localize_path($path);
-		return @is_file( $path );
+		return is_file( $path );
 	}//is_file()
 
 	/**
@@ -346,7 +352,7 @@ class filesystem{
 	 */
 	public function is_link( $path ){
 		$path = $this->localize_path($path);
-		return @is_link( $path );
+		return is_link( $path );
 	}//is_link()
 
 	/**
@@ -357,7 +363,7 @@ class filesystem{
 	 */
 	public function is_dir( $path ){
 		$path = $this->localize_path($path);
-		return @is_dir( $path );
+		return is_dir( $path );
 	}//is_dir()
 
 	/**
@@ -368,8 +374,8 @@ class filesystem{
 	 */
 	public function file_exists( $path ){
 		$path = $this->localize_path($path);
-		return @file_exists( $path );
-	}//file_exists()
+		return file_exists( $path );
+	} // file_exists()
 
 	/**
 	 * ディレクトリを作成する。
@@ -439,15 +445,14 @@ class filesystem{
 	 */
 	public function rm( $path ){
 		$path = $this->localize_path($path);
+		clearstatcache();
 
 		if( !$this->is_writable( $path ) ){
 			return false;
 		}
-		$path = @realpath( $path );
-		if( $path === false ){ return false; }
 		if( $this->is_file( $path ) || $this->is_link( $path ) ){
 			// ファイルまたはシンボリックリンクの場合の処理
-			$result = @unlink( $path );
+			$result = unlink( $path );
 			return	$result;
 
 		}elseif( $this->is_dir( $path ) ){
@@ -459,7 +464,7 @@ class filesystem{
 					$this->rm( $path.DIRECTORY_SEPARATOR.$Line );
 				}
 			}
-			$result = @rmdir( $path );
+			$result = rmdir( $path );
 			return	$result;
 
 		}
@@ -653,9 +658,9 @@ class filesystem{
 		$original = $this->localize_path($original);
 		$newname  = $this->localize_path($newname );
 
-		if( !@file_exists( $original ) ){ return false; }
+		if( !file_exists( $original ) ){ return false; }
 		if( !$this->is_writable( $original ) ){ return false; }
-		return @rename( $original , $newname );
+		return rename( $original , $newname );
 	}//rename()
 
 	/**
@@ -671,7 +676,7 @@ class filesystem{
 		$original = $this->localize_path($original);
 		$newname  = $this->localize_path($newname );
 
-		if( !@file_exists( $original ) ){ return false; }
+		if( !file_exists( $original ) ){ return false; }
 		if( !$this->is_writable( $original ) ){ return false; }
 		$dirname = dirname( $newname );
 		if( !$this->is_dir( $dirname ) ){
@@ -679,8 +684,8 @@ class filesystem{
 				return false;
 			}
 		}
-		return @rename( $original , $newname );
-	}//rename_f()
+		return rename( $original , $newname );
+	} // rename_f()
 
 	/**
 	 * 絶対パスを得る。
@@ -775,7 +780,7 @@ class filesystem{
 		if( preg_match( '/(\/|\\\\)+$/s', $path ) ){
 			$is_dir = true;
 		}
-		if( @!strlen( $cd ) ){
+		if( !strlen( $cd ) ){
 			$cd = realpath('.');
 		}elseif( $this->is_dir($cd) ){
 			$cd = realpath($cd);
@@ -839,14 +844,14 @@ class filesystem{
 	 * @return array パス情報
 	 */
 	public function pathinfo( $path ){
-		if(strpos($path,'#')!==false){ list($path, $hash) = @explode( '#', $path, 2 ); }
-		if(strpos($path,'?')!==false){ list($path, $query) = @explode( '?', $path, 2 ); }
+		if(strpos($path,'#')!==false){ list($path, $hash) = explode( '#', $path, 2 ); }
+		if(strpos($path,'?')!==false){ list($path, $query) = explode( '?', $path, 2 ); }
 
 		$pathinfo = pathinfo( $path );
 		$pathinfo['filename'] = $this->trim_extension( $pathinfo['basename'] );
 		$pathinfo['extension'] = $this->get_extension( $pathinfo['basename'] );
-		$pathinfo['query'] = (@strlen($query) ? '?'.$query : null);
-		$pathinfo['hash'] = (@strlen($hash) ? '#'.$hash : null);
+		$pathinfo['query'] = (isset($query)&&strlen($query) ? '?'.$query : null);
+		$pathinfo['hash'] = (isset($hash)&&strlen($hash) ? '#'.$hash : null);
 		return $pathinfo;
 	}
 
@@ -870,7 +875,10 @@ class filesystem{
 	 */
 	public function trim_extension( $path ){
 		$pathinfo = pathinfo( $path );
-		$RTN = preg_replace( '/\.'.preg_quote( @$pathinfo['extension'], '/' ).'$/' , '' , $path );
+		if( !array_key_exists('extension', $pathinfo) ){
+			$pathinfo['extension'] = '';
+		}
+		$RTN = preg_replace( '/\.'.preg_quote( $pathinfo['extension'], '/' ).'$/' , '' , $path );
 		return $RTN;
 	}
 
@@ -923,6 +931,16 @@ class filesystem{
 			return false;
 		}
 
+		// Normalize $options
+		if( !is_array($options) ){
+			$options = array();
+		}
+		if( !array_key_exists( 'charset', $options ) ){ $options['charset'] = null; }
+		if( !array_key_exists( 'delimiter', $options ) ){ $options['delimiter'] = null; }
+		if( !array_key_exists( 'enclosure', $options ) ){ $options['enclosure'] = null; }
+		if( !array_key_exists( 'size', $options ) ){ $options['size'] = null; }
+		if( !array_key_exists( 'charset', $options ) ){ $options['charset'] = null; }
+
 		if( !strlen( @$options['delimiter'] ) )    { $options['delimiter'] = ','; }
 		if( !strlen( @$options['enclosure'] ) )    { $options['enclosure'] = '"'; }
 		if( !strlen( @$options['size'] ) )         { $options['size'] = 10000; }
@@ -942,7 +960,7 @@ class filesystem{
 		}
 		fclose($fp);
 		return $RTN;
-	}//read_csv()
+	} // read_csv()
 
 	/**
 	 * 配列をCSV形式に変換する。
@@ -959,9 +977,17 @@ class filesystem{
 		// 省略時は UTF-8 に変換して返します。
 		if( !is_array( $array ) ){ $array = array(); }
 
-		if( @!strlen( $options['charset'] ) ){
+		// Normalize $options
+		if( !is_array($options) ){
+			$options = array();
+		}
+		if( !array_key_exists( 'charset', $options ) ){
+			$options['charset'] = null;
+		}
+		if( !strlen( $options['charset'] ) ){
 			$options['charset'] = 'UTF-8';
 		}
+
 		$RTN = '';
 		foreach( $array as $Line ){
 			if( is_null( $Line ) ){ continue; }
@@ -980,7 +1006,7 @@ class filesystem{
 			$RTN .= "\n";
 		}
 		return $RTN;
-	}//mk_csv()
+	} // mk_csv()
 
 	/**
 	 * ファイルを複製する。
@@ -1015,7 +1041,10 @@ class filesystem{
 	}//copy()
 
 	/**
-	 * ディレクトリを複製する(下層ディレクトリも全てコピー)
+	 * ディレクトリを再帰的に複製する(下層ディレクトリも全てコピー)
+	 *
+	 * ディレクトリを、含まれる内容ごと複製します。
+	 * 受け取ったパスがファイルの場合は、単体のファイルが複製されます。
 	 *
 	 * @param string $from コピー元ファイルのパス
 	 * @param string $to コピー先のパス
@@ -1069,17 +1098,20 @@ class filesystem{
 		}
 
 		return $result;
-	}//copy_r()
+	} // copy_r()
 
 	/**
 	 * パーミッションを変更する。
 	 *
 	 * @param string $filepath 対象のパス
-	 * @param int $perm 保存するファイルに与えるパーミッション
+	 * @param int $perm 与えるパーミッション
 	 * @return bool 成功時に `true`、失敗時に `false` を返します。
 	 */
-	public function chmod( $filepath , $perm = null ){
+	public function chmod( $filepath, $perm = null ){
 		$filepath = $this->localize_path($filepath);
+		if( !file_exists($filepath) ){
+			return;
+		}
 
 		if( is_null( $perm ) ){
 			if( $this->is_dir( $filepath ) ){
@@ -1091,8 +1123,61 @@ class filesystem{
 		if( is_null( $perm ) ){
 			$perm = 0775; // コンフィグに設定モレがあった場合
 		}
-		return @chmod( $filepath , $perm );
-	}//chmod()
+		return chmod( $filepath , $perm );
+	} // chmod()
+
+	/**
+	 * パーミッションを再帰的に変更する。(下層のファイルやディレクトリも全て)
+	 *
+	 * `$perm_file` と `$perm_dir` が省略された場合は、代わりに初期化時に登録されたデフォルトのパーミッションが与えられます。
+	 *
+	 * 第2引数 `$perm_dir` が省略され、最初の引数 `$perm_file` だけが与えられた場合は、 ファイルとディレクトリの両方に `$perm_file` が適用されます。
+	 *
+	 * @param string $filepath 対象のパス
+	 * @param int $perm_file ファイルに与えるパーミッション (省略可)
+	 * @param int $perm_dir ディレクトリに与えるパーミッション (省略可)
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function chmod_r( $filepath, $perm_file = null, $perm_dir = null ){
+		$filepath = $this->localize_path($filepath);
+		if( !is_null( $perm_file ) && is_null($perm_dir) ){
+			// パーミッション設定値が1つだけ与えられた場合には、
+			// ファイルにもディレクトリにも適用する。
+			$perm_dir = $perm_file;
+		}
+
+		$result = true;
+
+		if( $this->is_file( $filepath ) ){
+			if( !$this->chmod( $filepath, $perm_file ) ){
+				$result = false;
+			}
+		}elseif( $this->is_dir( $filepath ) ){
+			$itemlist = $this->ls( $filepath );
+			if( is_array($itemlist) ){
+				foreach( $itemlist as $Line ){
+					if( $Line == '.' || $Line == '..' ){ continue; }
+					if( $this->is_dir( $filepath.DIRECTORY_SEPARATOR.$Line ) ){
+						if( !$this->chmod( $filepath.DIRECTORY_SEPARATOR.$Line, $perm_dir ) ){
+							$result = false;
+						}
+						if( !$this->chmod_r( $filepath.DIRECTORY_SEPARATOR.$Line, $perm_file, $perm_dir ) ){
+							$result = false;
+						}
+						continue;
+					}elseif( $this->is_file( $filepath.DIRECTORY_SEPARATOR.$Line ) ){
+						if( !$this->chmod( $filepath.DIRECTORY_SEPARATOR.$Line, $perm_file ) ){
+							$result = false;
+						}
+						continue;
+					}
+				}
+			}
+		}
+
+		return $result;
+	} // chmod_r()
+
 
 	/**
 	 * パーミッション情報を調べ、3桁の数字で返す。
@@ -1103,7 +1188,7 @@ class filesystem{
 	public function get_permission( $path ){
 		$path = $this->localize_path($path);
 
-		if( !@file_exists( $path ) ){
+		if( !file_exists( $path ) ){
 			return false;
 		}
 		$perm = rtrim( sprintf( "%o\n" , fileperms( $path ) ) );
@@ -1122,7 +1207,7 @@ class filesystem{
 		$path = $this->localize_path($path);
 
 		if( $path === false ){ return false; }
-		if( !@file_exists( $path ) ){ return false; }
+		if( !file_exists( $path ) ){ return false; }
 		if( !$this->is_dir( $path ) ){ return false; }
 
 		$RTN = array();
@@ -1154,7 +1239,7 @@ class filesystem{
 		$target = $this->localize_path($target);
 		$comparison = $this->localize_path($comparison);
 
-		if( !@file_exists( $comparison ) && @file_exists( $target ) ){
+		if( !file_exists( $comparison ) && file_exists( $target ) ){
 			$this->rm( $target );
 			return true;
 		}
@@ -1204,6 +1289,14 @@ class filesystem{
 		$path = @realpath( $path );
 		if( $path === false ){ return false; }
 
+		// Normalize $options
+		if( !is_array($options) ){
+			$options = array();
+		}
+		if( !array_key_exists( 'depth', $options ) ){
+			$options['depth'] = null;
+		}
+
 		// --------------------------------------
 		// 次の階層を処理するかどうかのスイッチ
 		$switch_donext = false;
@@ -1245,7 +1338,7 @@ class filesystem{
 					$this->remove_empty_dir( $path.DIRECTORY_SEPARATOR.$Line , $options );
 				}
 			}
-			if( @file_exists( $path.DIRECTORY_SEPARATOR.$Line ) ){
+			if( file_exists( $path.DIRECTORY_SEPARATOR.$Line ) ){
 				$alive = true;
 			}
 		}
@@ -1284,6 +1377,17 @@ class filesystem{
 		}
 		if( ( ( $this->is_dir( $dir_a ) && !$this->is_dir( $dir_b ) ) || ( !$this->is_dir( $dir_a ) && $this->is_dir( $dir_b ) ) ) && $options['compare_emptydir'] ){
 			return false;
+		}
+
+		// Normalize $options
+		if( !is_array($options) ){
+			$options = array();
+		}
+		if( !array_key_exists( 'compare_filecontent', $options ) ){
+			$options['compare_filecontent'] = null;
+		}
+		if( !array_key_exists( 'compare_emptydir', $options ) ){
+			$options['compare_emptydir'] = null;
 		}
 
 		if( $this->is_file( $dir_a ) && $this->is_file( $dir_b ) ){
@@ -1526,6 +1630,12 @@ class filesystem{
 
 }
 ?><?php
+/**
+ * tomk79/request
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+
 namespace renconFramework;
 
 /**
@@ -1551,6 +1661,10 @@ class request{
 	 */
 	private $flg_cmd = false;
 	/**
+	 * リクエストファイルパス
+	 */
+	private $request_file_path;
+	/**
 	 * 優先ディレクトリインデックス
 	 */
 	private $directory_index_primary;
@@ -1573,6 +1687,7 @@ class request{
 		if( !is_object($this->conf) ){
 			$this->conf = json_decode('{}');
 		}
+		$this->fs = new filesystem();
 
 		if(!property_exists($this->conf, 'get') || !@is_array($this->conf->get)){
 			$this->conf->get = $_GET;
@@ -1626,6 +1741,10 @@ class request{
 	 * @return bool 常に `true`
 	 */
 	private function parse_input(){
+		$this->request_file_path = $this->conf->server['PATH_INFO'];
+		if( !strlen($this->request_file_path) ){
+			$this->request_file_path = '/';
+		}
 		$this->cli_params = array();
 		$this->cli_options = array();
 
@@ -1647,6 +1766,7 @@ class request{
 				if( preg_match( '/^\//', $tmp_path ) && @is_array($this->conf->server['argv']) ){
 					$tmp_path = array_pop( $this->conf->server['argv'] );
 					$tmp_path = parse_url($tmp_path);
+					$this->request_file_path = $tmp_path['path'];
 					@parse_str( $tmp_path['query'], $query );
 					if( is_array($query) ){
 						$this->conf->get = array_merge( $this->conf->get, $query );
@@ -1683,6 +1803,12 @@ class request{
 
 		$this->param = $param;
 		unset($param);
+
+		if (preg_match('/\/$/', $this->request_file_path)) {
+			$this->request_file_path .= $this->conf->directory_index_primary;
+		}
+		$this->request_file_path = $this->fs->get_realpath( $this->request_file_path );
+		$this->request_file_path = $this->fs->normalize_path( $this->request_file_path );
 
 		return	true;
 	}//parse_input()
@@ -2072,6 +2198,15 @@ class request{
 	public function get_user_agent(){
 		return @$this->conf->server['HTTP_USER_AGENT'];
 	}//get_user_agent()
+
+	/**
+	 * リクエストパスを取得する。
+	 *
+	 * @return string リクエストパス
+	 */
+	public function get_request_file_path(){
+		return $this->request_file_path;
+	}//get_request_file_path()
 
 	/**
 	 *  SSL通信か調べる

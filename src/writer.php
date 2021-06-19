@@ -117,7 +117,7 @@ class writer {
 				$src_route .= ''.var_export($route, true).' => (object) array('."\n";
 				$src_route .= '	"title" => '.var_export($func_name->title, true).','."\n";
 				if( is_file( $func_name->page ) ){
-					$src_route .= '	"page" => function( $rencon ){'."\n";
+					$src_route .= '	"page" => function( $rencon ){ ?'.'>'."\n";
 					$src_route .= file_get_contents( $func_name->page );
 					$src_route .= '<'.'?php return; },'."\n";
 				}else{

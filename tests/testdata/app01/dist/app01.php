@@ -71,7 +71,7 @@ class rencon {
 
 '' => (object) array(
 	"title" => 'Home',
-	"page" => function( $rencon ){
+	"page" => function( $rencon ){ ?>
 <p>トップページ</p>
 
 <p><?php
@@ -159,7 +159,7 @@ var_dump( $_REQUEST );
 			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
-			call_user_func( $controller->page );
+			call_user_func( $controller->page, $this );
 			$content = ob_get_clean();
 
 

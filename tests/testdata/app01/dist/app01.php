@@ -71,8 +71,7 @@ class rencon {
 
 '' => (object) array(
 	"title" => 'Home',
-	"page" => function(){
-$rencon = $this; ?>
+	"page" => function( $rencon ){
 <p>トップページ</p>
 
 <p><?php

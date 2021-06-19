@@ -120,7 +120,7 @@ class rencon {
 			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
-			call_user_func( $controller->page );
+			call_user_func( $controller->page, $this );
 			$content = ob_get_clean();
 
 

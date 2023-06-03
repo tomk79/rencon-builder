@@ -8,6 +8,7 @@ namespace renconFramework;
  */
 class conf{
 	private $conf;
+	private $custom_dynamic_property = array();
 	public $users;
 	public $databases;
 
@@ -34,6 +35,25 @@ class conf{
 			$this->databases = (array) $conf->databases;
 		}
 
+	}
+
+	/**
+	 * 動的なプロパティを登録する
+	 */
+	public function __set( $name, $property ){
+		if( isset($this->custom_dynamic_property[$name]) ){
+			$this->error('$conf->'.$name.' is already registered.');
+			return;
+		}
+		$this->custom_dynamic_property[$name] = $property;
+		return;
+	}
+
+	/**
+	 * 動的に追加されたプロパティを取り出す
+	 */
+	public function __get( $name ){
+		return $this->custom_dynamic_property[$name] ?? null;
 	}
 
 	/**

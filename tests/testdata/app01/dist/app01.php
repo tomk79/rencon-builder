@@ -2549,13 +2549,13 @@ class login{
 <html>
 	<head>
 		<meta charset="UTF-8" />
-		<title><?= htmlspecialchars( $this->app_info->name ) ?></title>
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
 		<meta name="robots" content="nofollow, noindex, noarchive" />
 		<?= $this->mk_css() ?>
 	</head>
 	<body>
 		<div class="theme-container">
-			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
 			<?php if( strlen($this->rencon->req()->get_param('login_try') ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div>IDまたはパスワードが違います。</div>
@@ -2569,7 +2569,7 @@ class login{
 </table>
 <p><button type="submit">Login</button></p>
 <input type="hidden" name="login_try" value="1" />
-<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a')) ?>" />
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
 			</form>
 		</div>
 	</body>
@@ -2596,13 +2596,13 @@ class login{
 <html>
 	<head>
 		<meta charset="UTF-8" />
-		<title><?= htmlspecialchars( $this->app_info->name ) ?></title>
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
 		<meta name="robots" content="nofollow, noindex, noarchive" />
 		<?= $this->mk_css() ?>
 	</head>
 	<body>
 		<div class="theme-container">
-			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
 			<p>Logged out.</p>
 			<p><a href="?">Back to Home</a></p>
 		</div>

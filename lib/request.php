@@ -79,16 +79,16 @@ class request{
 		if( !array_key_exists( 'argv' , $this->conf->server ) ){
 			$this->conf->server['argv'] = null;
 		}
-		if(!property_exists($this->conf, 'session_name') || !@strlen($this->conf->session_name)){
+		if(!property_exists($this->conf, 'session_name') || !strlen($this->conf->session_name ?? '')){
 			$this->conf->session_name = 'SESSID';
 		}
-		if(!property_exists($this->conf, 'session_expire') || !@strlen($this->conf->session_expire)){
+		if(!property_exists($this->conf, 'session_expire') || !strlen($this->conf->session_expire ?? '')){
 			$this->conf->session_expire = 1800;
 		}
-		if(!property_exists($this->conf, 'directory_index_primary') || !@strlen($this->conf->directory_index_primary)){
+		if(!property_exists($this->conf, 'directory_index_primary') || !strlen($this->conf->directory_index_primary ?? '')){
 			$this->conf->directory_index_primary = 'index.html';
 		}
-		if(!property_exists($this->conf, 'cookie_default_path') || !@strlen($this->conf->cookie_default_path)){
+		if(!property_exists($this->conf, 'cookie_default_path') || !strlen($this->conf->cookie_default_path ?? '')){
 			// クッキーのデフォルトのパス
 			// session の範囲もこの設定に従う。
 			$this->conf->cookie_default_path = $this->get_path_current_dir();
@@ -111,7 +111,7 @@ class request{
 	 */
 	private function parse_input(){
 		$this->request_file_path = $this->conf->server['PATH_INFO'];
-		if( !strlen($this->request_file_path) ){
+		if( !strlen($this->request_file_path ?? '') ){
 			$this->request_file_path = '/';
 		}
 		$this->cli_params = array();
@@ -324,10 +324,10 @@ class request{
 	public function set_cookie( $key , $val , $expire = null , $path = null , $domain = null , $secure = true ){
 		if( is_null( $path ) ){
 			$path = $this->conf->cookie_default_path;
-			if( !strlen( $path ) ){
+			if( !strlen( $path ?? '' ) ){
 				$path = $this->get_path_current_dir();
 			}
-			if( !strlen( $path ) ){
+			if( !strlen( $path ?? '' ) ){
 				$path = '/';
 			}
 		}
@@ -367,14 +367,14 @@ class request{
 		$expire = intval($this->conf->session_expire);
 		$cache_limiter = 'nocache';
 		$session_name = 'SESSID';
-		if( strlen( $this->conf->session_name ) ){
+		if( strlen( $this->conf->session_name ?? '' ) ){
 			$session_name = $this->conf->session_name;
 		}
 		$path = $this->conf->cookie_default_path;
-		if( !strlen( $path ) ){
+		if( !strlen( $path ?? '' ) ){
 			$path = $this->get_path_current_dir();
 		}
-		if( !strlen( $path ) ){
+		if( !strlen( $path ?? '' ) ){
 			$path = '/';
 		}
 
@@ -393,7 +393,7 @@ class request{
 			//  セッションクッキー自体の寿命は定めない(=0)
 			//  そのかわり、SESSION_LAST_MODIFIED を新設し、自分で寿命を管理する。
 
-		if( strlen( $sid ) ){
+		if( strlen( $sid ?? '' ) ){
 			// セッションIDに指定があれば、有効にする。
 			session_id( $sid );
 		}
@@ -402,7 +402,7 @@ class request{
 		$rtn = @session_start();
 
 		// セッションの有効期限を評価
-		if( strlen( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) && intval( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) < intval( time() - $expire ) ){
+		if( strlen( $this->get_session( 'SESSION_LAST_MODIFIED' ) ?? '' ) && intval( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) < intval( time() - $expire ) ){
 			#	セッションの有効期限が切れていたら、セッションキーを再発行。
 			if( is_callable('session_regenerate_id') ){
 				@session_regenerate_id( true );
@@ -506,21 +506,23 @@ class request{
 	 * @return array|bool 成功時、ファイル情報 を格納した連想配列、失敗時 `false` を返します。
 	 */
 	public function get_uploadfile( $key ){
-		if(!strlen($key)){ return false; }
-		if( @!is_array( $_SESSION ) ){
+		if(!strlen($key ?? '')){
 			return false;
 		}
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !is_array( $_SESSION ?? null ) ){
 			return false;
 		}
-		if( @!array_key_exists($key, $_SESSION['FILE']) ){
+		if( !array_key_exists('FILE', $_SESSION) ){
+			return false;
+		}
+		if( !array_key_exists($key, $_SESSION['FILE'] ?? array()) ){
 			return false;
 		}
 
-		$rtn = @$_SESSION['FILE'][$key];
+		$rtn = $_SESSION['FILE'][$key] ?? null;
 		if( is_null( $rtn ) ){ return false; }
 
-		$rtn['content'] = base64_decode( @$rtn['content'] );
+		$rtn['content'] = base64_decode( $rtn['content'] ?? '' );
 		return	$rtn;
 	}
 	/**
@@ -529,7 +531,7 @@ class request{
 	 * @return array ファイル情報 を格納した連想配列
 	 */
 	public function get_uploadfile_list(){
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !array_key_exists('FILE', $_SESSION ?? array()) ){
 			return false;
 		}
 		return	array_keys( $_SESSION['FILE'] );
@@ -541,7 +543,7 @@ class request{
 	 * @return bool 常に `true` を返します。
 	 */
 	public function delete_uploadfile( $key ){
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !array_key_exists('FILE', $_SESSION ?? array()) ){
 			return true;
 		}
 		unset( $_SESSION['FILE'][$key] );
@@ -565,8 +567,8 @@ class request{
 	 * @return string USER_AGENT
 	 */
 	public function get_user_agent(){
-		return @$this->conf->server['HTTP_USER_AGENT'];
-	}//get_user_agent()
+		return $this->conf->server['HTTP_USER_AGENT'] ?? null;
+	}
 
 	/**
 	 * リクエストパスを取得する。
@@ -575,7 +577,7 @@ class request{
 	 */
 	public function get_request_file_path(){
 		return $this->request_file_path;
-	}//get_request_file_path()
+	}
 
 	/**
 	 *  SSL通信か調べる
@@ -583,7 +585,7 @@ class request{
 	 * @return bool SSL通信の場合 `true`、それ以外の場合 `false` を返します。
 	 */
 	public function is_ssl(){
-		if( @$this->conf->server['HTTP_SSL'] || @$this->conf->server['HTTPS'] ){
+		if( $this->conf->server['HTTP_SSL'] ?? null || $this->conf->server['HTTPS'] ?? null ){
 			// SSL通信が有効か否か判断
 			return true;
 		}
@@ -596,7 +598,7 @@ class request{
 	 * @return bool コマンドからの実行の場合 `true`、ウェブからの実行の場合 `false` を返します。
 	 */
 	public function is_cmd(){
-		if( array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+		if( array_key_exists( 'REMOTE_ADDR' , $this->conf->server ?? array() ) ){
 			return false;
 		}
 		return	true;
@@ -615,8 +617,8 @@ class request{
 	 */
 	private static function convert_encoding( $text, $encode = null, $encodefrom = null ){
 		if( !is_callable( 'mb_internal_encoding' ) ){ return $text; }
-		if( !strlen( $encodefrom ) ){ $encodefrom = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII'; }
-		if( !strlen( $encode ) ){ $encode = mb_internal_encoding(); }
+		if( !strlen( $encodefrom ?? '' ) ){ $encodefrom = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII'; }
+		if( !strlen( $encode ?? '' ) ){ $encode = mb_internal_encoding(); }
 
 		if( is_array( $text ) ){
 			$rtn = array();
@@ -625,14 +627,16 @@ class request{
 			foreach( $TEXT_KEYS as $Line ){
 				$KEY = mb_convert_encoding( $Line , $encode , $encodefrom );
 				if( is_array( $text[$Line] ) ){
-					$rtn[$KEY] = self::convert_encoding( $text[$Line] , $encode , $encodefrom );
+					$rtn[$KEY] = self::convert_encoding( $text[$Line], $encode, $encodefrom );
 				}else{
-					$rtn[$KEY] = @mb_convert_encoding( $text[$Line] , $encode , $encodefrom );
+					$rtn[$KEY] = @mb_convert_encoding( $text[$Line], $encode, $encodefrom );
 				}
 			}
 		}else{
-			if( !strlen( $text ) ){ return $text; }
-			$rtn = @mb_convert_encoding( $text , $encode , $encodefrom );
+			if( !strlen( $text ?? '' ) ){
+				return $text;
+			}
+			$rtn = @mb_convert_encoding( $text, $encode, $encodefrom );
 		}
 		return $rtn;
 	}
@@ -666,7 +670,7 @@ class request{
 	private function get_path_current_dir(){
 		//  環境変数から自動的に判断。
 		$rtn = dirname( $this->conf->server['SCRIPT_NAME'] );
-		if( !array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+		if( !array_key_exists( 'REMOTE_ADDR', $this->conf->server ) ){
 			//  CUIから起動された場合
 			//  ドキュメントルートが判定できないので、
 			//  ドキュメントルート直下にあるものとする。
@@ -675,7 +679,7 @@ class request{
 		$rtn = str_replace('\\','/',$rtn);
 		$rtn .= ($rtn!='/'?'/':'');
 		return $rtn;
-	}//get_path_current_dir()
+	}
 
 }
 ?>

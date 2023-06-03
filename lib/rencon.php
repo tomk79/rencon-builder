@@ -72,7 +72,7 @@ class rencon {
 
 		// --------------------------------------
 		// リソースへのリクエストを処理
-		if( strlen($resource) ){
+		if( strlen($resource ?? '') ){
 			$this->resources->echo_resource( $resource );
 			exit();
 

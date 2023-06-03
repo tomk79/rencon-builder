@@ -33,13 +33,13 @@ class filesystem{
 		if(!is_array($conf)){
 			$conf = array();
 		}
-		if( array_key_exists('file_default_permission', $conf) && strlen( $conf['file_default_permission'] ) ){
+		if( array_key_exists('file_default_permission', $conf) && strlen( $conf['file_default_permission'] ?? '' ) ){
 			$this->default_permission['file'] = octdec( $conf['file_default_permission'] );
 		}
-		if( array_key_exists('dir_default_permission', $conf) && strlen( $conf['dir_default_permission'] ) ){
+		if( array_key_exists('dir_default_permission', $conf) && strlen( $conf['dir_default_permission'] ?? '' ) ){
 			$this->default_permission['dir'] = octdec( $conf['dir_default_permission'] );
 		}
-		if( array_key_exists('filesystem_encoding', $conf) && strlen( $conf['filesystem_encoding'] ) ){
+		if( array_key_exists('filesystem_encoding', $conf) && strlen( $conf['filesystem_encoding'] ?? '' ) ){
 			$this->filesystem_encoding = trim( $conf['filesystem_encoding'] );
 		}
 	}
@@ -152,7 +152,7 @@ class filesystem{
 		$patharray = explode( DIRECTORY_SEPARATOR , $this->localize_path( $this->get_realpath($dirpath) ) );
 		$targetpath = '';
 		foreach( $patharray as $idx=>$Line ){
-			if( !strlen( $Line ) || $Line == '.' || $Line == '..' ){ continue; }
+			if( !strlen( $Line ?? '' ) || $Line == '.' || $Line == '..' ){ continue; }
 			if(!($idx===0 && DIRECTORY_SEPARATOR == '\\' && preg_match('/^[a-zA-Z]\:$/s', $Line))){
 				$targetpath .= DIRECTORY_SEPARATOR;
 			}
@@ -307,7 +307,7 @@ class filesystem{
 			return false;
 		}
 
-		if( !strlen( $content ) ){
+		if( !strlen( $content ?? '' ) ){
 			// 空白のファイルで上書きしたい場合
 			if( $this->is_file( $filepath ) ){
 				@unlink( $filepath );
@@ -324,7 +324,7 @@ class filesystem{
 			return false;
 		}
 
-		for ($written = 0; $written < strlen($content); $written += $fwrite) {
+		for ($written = 0; $written < strlen($content ?? ''); $written += $fwrite) {
 			$fwrite = fwrite($fp, substr($content, $written));
 			if ($fwrite === false) {
 				break;
@@ -516,7 +516,7 @@ class filesystem{
 		if( preg_match( '/(\/|\\\\)+$/s', $path ) ){
 			$is_dir = true;
 		}
-		if( !strlen( $cd ) ){
+		if( !strlen( $cd ?? '' ) ){
 			$cd = realpath('.');
 		}elseif( $this->is_dir($cd) ){
 			$cd = realpath($cd);
@@ -533,7 +533,7 @@ class filesystem{
 			}
 			$tmp_path = preg_replace( '/^('.$preg_dirsep.')+/s', '', $tmp_path );
 			$tmp_path = preg_replace( '/('.$preg_dirsep.')+$/s', '', $tmp_path );
-			if( strlen($tmp_path) ){
+			if( strlen($tmp_path ?? '') ){
 				$tmp_path = explode( DIRECTORY_SEPARATOR, $tmp_path );
 			}else{
 				$tmp_path = array();
@@ -586,8 +586,8 @@ class filesystem{
 		$pathinfo = pathinfo( $path );
 		$pathinfo['filename'] = $this->trim_extension( $pathinfo['basename'] );
 		$pathinfo['extension'] = $this->get_extension( $pathinfo['basename'] );
-		$pathinfo['query'] = (isset($query)&&strlen($query) ? '?'.$query : null);
-		$pathinfo['hash'] = (isset($hash)&&strlen($hash) ? '#'.$hash : null);
+		$pathinfo['query'] = (isset($query)&&strlen($query ?? '') ? '?'.$query : null);
+		$pathinfo['hash'] = (isset($hash)&&strlen($hash ?? '') ? '#'.$hash : null);
 		return $pathinfo;
 	}
 
@@ -599,7 +599,7 @@ class filesystem{
 	 */
 	public function get_basename( $path ){
 		$path = pathinfo( $path , PATHINFO_BASENAME );
-		if( !strlen($path) ){$path = null;}
+		if( !strlen($path ?? '') ){$path = null;}
 		return $path;
 	}
 
@@ -626,7 +626,7 @@ class filesystem{
 	 */
 	public function get_dirpath( $path ){
 		$path = pathinfo( $path , PATHINFO_DIRNAME );
-		if( !strlen($path) ){$path = null;}
+		if( !strlen($path ?? '') ){$path = null;}
 		return $path;
 	}
 
@@ -640,7 +640,7 @@ class filesystem{
 		$path = preg_replace('/\#.*$/si', '', $path);
 		$path = preg_replace('/\?.*$/si', '', $path);
 		$path = pathinfo( $path , PATHINFO_EXTENSION );
-		if(!strlen($path)){$path = null;}
+		if(!strlen($path ?? '')){$path = null;}
 		return $path;
 	}
 
@@ -677,10 +677,10 @@ class filesystem{
 		if( !array_key_exists( 'size', $options ) ){ $options['size'] = null; }
 		if( !array_key_exists( 'charset', $options ) ){ $options['charset'] = null; }
 
-		if( !strlen( @$options['delimiter'] ) )    { $options['delimiter'] = ','; }
-		if( !strlen( @$options['enclosure'] ) )    { $options['enclosure'] = '"'; }
-		if( !strlen( @$options['size'] ) )         { $options['size'] = 10000; }
-		if( !strlen( @$options['charset'] ) )      { $options['charset'] = 'UTF-8'; }//←CSVの文字セット
+		if( !strlen( $options['delimiter'] ?? '' ) )    { $options['delimiter'] = ','; }
+		if( !strlen( $options['enclosure'] ?? '' ) )    { $options['enclosure'] = '"'; }
+		if( !strlen( $options['size'] ?? '' ) )         { $options['size'] = 10000; }
+		if( !strlen( $options['charset'] ?? '' ) )      { $options['charset'] = 'UTF-8'; }//←CSVの文字セット
 
 		$RTN = array();
 		$fp = fopen( $path, 'r' );
@@ -720,7 +720,7 @@ class filesystem{
 		if( !array_key_exists( 'charset', $options ) ){
 			$options['charset'] = null;
 		}
-		if( !strlen( $options['charset'] ) ){
+		if( !strlen( $options['charset'] ?? '' ) ){
 			$options['charset'] = 'UTF-8';
 		}
 
@@ -733,7 +733,7 @@ class filesystem{
 				if( preg_match( '/"/' , $cell ) ){
 					$cell = preg_replace( '/"/' , '""' , $cell);
 				}
-				if( strlen( $cell ) ){
+				if( strlen( $cell ?? '' ) ){
 					$cell = '"'.$cell.'"';
 				}
 				$RTN .= $cell.',';
@@ -928,7 +928,7 @@ class filesystem{
 			return false;
 		}
 		$perm = rtrim( sprintf( "%o\n" , fileperms( $path ) ) );
-		$start = strlen( $perm ) - 3;
+		$start = strlen( $perm ?? '' ) - 3;
 		return substr( $perm , $start , 3 );
 	}//get_permission()
 
@@ -954,7 +954,7 @@ class filesystem{
 			array_push( $RTN , $ent );
 		}
 		closedir($dr);
-		if( strlen( $this->filesystem_encoding ) ){
+		if( strlen( $this->filesystem_encoding ?? '' ) ){
 			//PxFW 0.6.4 追加
 			$RTN = @$this->convert_filesystem_encoding( $RTN );
 		}
@@ -1102,7 +1102,7 @@ class filesystem{
 	 */
 	public function compare_dir( $dir_a , $dir_b , $options = array() ){
 
-		if( strlen( $this->filesystem_encoding ) ){
+		if( strlen( $this->filesystem_encoding ?? '' ) ){
 			//PxFW 0.6.4 追加
 			$dir_a = @$this->convert_filesystem_encoding( $dir_a );
 			$dir_b = @$this->convert_filesystem_encoding( $dir_b );
@@ -1269,7 +1269,7 @@ class filesystem{
 		if( !is_callable( 'mb_internal_encoding' ) ){
 			return $text;
 		}
-		if( !strlen( $this->filesystem_encoding ) ){
+		if( !strlen( $this->filesystem_encoding ?? '' ) ){
 			return $text;
 		}
 
@@ -1295,14 +1295,14 @@ class filesystem{
 		}
 
 		$to_encoding_fin = $to_encoding;
-		if( !strlen($to_encoding_fin) ){
+		if( !strlen($to_encoding_fin ?? '') ){
 			$to_encoding_fin = mb_internal_encoding();
 		}
-		if( !strlen($to_encoding_fin) ){
+		if( !strlen($to_encoding_fin ?? '') ){
 			$to_encoding_fin = 'UTF-8';
 		}
 
-		$from_encoding_fin = (strlen($from_encoding)?$from_encoding.',':'').mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
+		$from_encoding_fin = (strlen($from_encoding ?? '') ? $from_encoding.',' : '').mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
 
 		// ---
 		if( is_array( $text ) ){
@@ -1314,7 +1314,7 @@ class filesystem{
 				$RTN[$key] = $this->convert_encoding( $row, $to_encoding, $from_encoding );
 			}
 		}else{
-			if( !strlen( $text ) ){
+			if( !strlen( $text ?? '' ) ){
 				return $text;
 			}
 			$RTN = mb_convert_encoding( $text, $to_encoding_fin, $from_encoding_fin );
@@ -1330,7 +1330,7 @@ class filesystem{
 	 * @return string 改行コード変換後のテキスト
 	 */
 	public function convert_crlf( $text, $crlf = null ){
-		if( !strlen($crlf) ){
+		if( !strlen($crlf ?? '') ){
 			$crlf = 'LF';
 		}
 		$crlf_code = "\n";
@@ -1356,7 +1356,7 @@ class filesystem{
 				$RTN[$key] = $this->convert_crlf( $val , $crlf );
 			}
 		}else{
-			if( !strlen( $text ) ){
+			if( !strlen( $text ?? '' ) ){
 				return $text;
 			}
 			$RTN = preg_replace( '/\r\n|\r|\n/', $crlf_code, $text );

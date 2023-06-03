@@ -21,7 +21,7 @@ class user{
 	 */
 	public function is_login(){
 		$login_id = $this->get_user_id();
-		return !!strlen($login_id);
+		return !!strlen($login_id ?? '');
 	}
 
 	/**

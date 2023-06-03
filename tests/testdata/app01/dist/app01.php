@@ -109,7 +109,7 @@ var_dump( $_REQUEST );
 
 		// --------------------------------------
 		// リソースへのリクエストを処理
-		if( strlen($resource) ){
+		if( strlen($resource ?? '') ){
 			$this->resources->echo_resource( $resource );
 			exit();
 
@@ -210,6 +210,7 @@ namespace renconFramework;
  */
 class conf{
 	private $conf;
+	private $custom_dynamic_property = array();
 	public $users;
 	public $databases;
 
@@ -236,6 +237,25 @@ class conf{
 			$this->databases = (array) $conf->databases;
 		}
 
+	}
+
+	/**
+	 * 動的なプロパティを登録する
+	 */
+	public function __set( $name, $property ){
+		if( isset($this->custom_dynamic_property[$name]) ){
+			$this->error('$conf->'.$name.' is already registered.');
+			return;
+		}
+		$this->custom_dynamic_property[$name] = $property;
+		return;
+	}
+
+	/**
+	 * 動的に追加されたプロパティを取り出す
+	 */
+	public function __get( $name ){
+		return $this->custom_dynamic_property[$name] ?? null;
 	}
 
 	/**
@@ -297,13 +317,13 @@ class filesystem{
 		if(!is_array($conf)){
 			$conf = array();
 		}
-		if( array_key_exists('file_default_permission', $conf) && strlen( $conf['file_default_permission'] ) ){
+		if( array_key_exists('file_default_permission', $conf) && strlen( $conf['file_default_permission'] ?? '' ) ){
 			$this->default_permission['file'] = octdec( $conf['file_default_permission'] );
 		}
-		if( array_key_exists('dir_default_permission', $conf) && strlen( $conf['dir_default_permission'] ) ){
+		if( array_key_exists('dir_default_permission', $conf) && strlen( $conf['dir_default_permission'] ?? '' ) ){
 			$this->default_permission['dir'] = octdec( $conf['dir_default_permission'] );
 		}
-		if( array_key_exists('filesystem_encoding', $conf) && strlen( $conf['filesystem_encoding'] ) ){
+		if( array_key_exists('filesystem_encoding', $conf) && strlen( $conf['filesystem_encoding'] ?? '' ) ){
 			$this->filesystem_encoding = trim( $conf['filesystem_encoding'] );
 		}
 	}
@@ -416,7 +436,7 @@ class filesystem{
 		$patharray = explode( DIRECTORY_SEPARATOR , $this->localize_path( $this->get_realpath($dirpath) ) );
 		$targetpath = '';
 		foreach( $patharray as $idx=>$Line ){
-			if( !strlen( $Line ) || $Line == '.' || $Line == '..' ){ continue; }
+			if( !strlen( $Line ?? '' ) || $Line == '.' || $Line == '..' ){ continue; }
 			if(!($idx===0 && DIRECTORY_SEPARATOR == '\\' && preg_match('/^[a-zA-Z]\:$/s', $Line))){
 				$targetpath .= DIRECTORY_SEPARATOR;
 			}
@@ -571,7 +591,7 @@ class filesystem{
 			return false;
 		}
 
-		if( !strlen( $content ) ){
+		if( !strlen( $content ?? '' ) ){
 			// 空白のファイルで上書きしたい場合
 			if( $this->is_file( $filepath ) ){
 				@unlink( $filepath );
@@ -588,7 +608,7 @@ class filesystem{
 			return false;
 		}
 
-		for ($written = 0; $written < strlen($content); $written += $fwrite) {
+		for ($written = 0; $written < strlen($content ?? ''); $written += $fwrite) {
 			$fwrite = fwrite($fp, substr($content, $written));
 			if ($fwrite === false) {
 				break;
@@ -780,7 +800,7 @@ class filesystem{
 		if( preg_match( '/(\/|\\\\)+$/s', $path ) ){
 			$is_dir = true;
 		}
-		if( !strlen( $cd ) ){
+		if( !strlen( $cd ?? '' ) ){
 			$cd = realpath('.');
 		}elseif( $this->is_dir($cd) ){
 			$cd = realpath($cd);
@@ -797,7 +817,7 @@ class filesystem{
 			}
 			$tmp_path = preg_replace( '/^('.$preg_dirsep.')+/s', '', $tmp_path );
 			$tmp_path = preg_replace( '/('.$preg_dirsep.')+$/s', '', $tmp_path );
-			if( strlen($tmp_path) ){
+			if( strlen($tmp_path ?? '') ){
 				$tmp_path = explode( DIRECTORY_SEPARATOR, $tmp_path );
 			}else{
 				$tmp_path = array();
@@ -850,8 +870,8 @@ class filesystem{
 		$pathinfo = pathinfo( $path );
 		$pathinfo['filename'] = $this->trim_extension( $pathinfo['basename'] );
 		$pathinfo['extension'] = $this->get_extension( $pathinfo['basename'] );
-		$pathinfo['query'] = (isset($query)&&strlen($query) ? '?'.$query : null);
-		$pathinfo['hash'] = (isset($hash)&&strlen($hash) ? '#'.$hash : null);
+		$pathinfo['query'] = (isset($query)&&strlen($query ?? '') ? '?'.$query : null);
+		$pathinfo['hash'] = (isset($hash)&&strlen($hash ?? '') ? '#'.$hash : null);
 		return $pathinfo;
 	}
 
@@ -863,7 +883,7 @@ class filesystem{
 	 */
 	public function get_basename( $path ){
 		$path = pathinfo( $path , PATHINFO_BASENAME );
-		if( !strlen($path) ){$path = null;}
+		if( !strlen($path ?? '') ){$path = null;}
 		return $path;
 	}
 
@@ -890,7 +910,7 @@ class filesystem{
 	 */
 	public function get_dirpath( $path ){
 		$path = pathinfo( $path , PATHINFO_DIRNAME );
-		if( !strlen($path) ){$path = null;}
+		if( !strlen($path ?? '') ){$path = null;}
 		return $path;
 	}
 
@@ -904,7 +924,7 @@ class filesystem{
 		$path = preg_replace('/\#.*$/si', '', $path);
 		$path = preg_replace('/\?.*$/si', '', $path);
 		$path = pathinfo( $path , PATHINFO_EXTENSION );
-		if(!strlen($path)){$path = null;}
+		if(!strlen($path ?? '')){$path = null;}
 		return $path;
 	}
 
@@ -941,10 +961,10 @@ class filesystem{
 		if( !array_key_exists( 'size', $options ) ){ $options['size'] = null; }
 		if( !array_key_exists( 'charset', $options ) ){ $options['charset'] = null; }
 
-		if( !strlen( @$options['delimiter'] ) )    { $options['delimiter'] = ','; }
-		if( !strlen( @$options['enclosure'] ) )    { $options['enclosure'] = '"'; }
-		if( !strlen( @$options['size'] ) )         { $options['size'] = 10000; }
-		if( !strlen( @$options['charset'] ) )      { $options['charset'] = 'UTF-8'; }//←CSVの文字セット
+		if( !strlen( $options['delimiter'] ?? '' ) )    { $options['delimiter'] = ','; }
+		if( !strlen( $options['enclosure'] ?? '' ) )    { $options['enclosure'] = '"'; }
+		if( !strlen( $options['size'] ?? '' ) )         { $options['size'] = 10000; }
+		if( !strlen( $options['charset'] ?? '' ) )      { $options['charset'] = 'UTF-8'; }//←CSVの文字セット
 
 		$RTN = array();
 		$fp = fopen( $path, 'r' );
@@ -984,7 +1004,7 @@ class filesystem{
 		if( !array_key_exists( 'charset', $options ) ){
 			$options['charset'] = null;
 		}
-		if( !strlen( $options['charset'] ) ){
+		if( !strlen( $options['charset'] ?? '' ) ){
 			$options['charset'] = 'UTF-8';
 		}
 
@@ -997,7 +1017,7 @@ class filesystem{
 				if( preg_match( '/"/' , $cell ) ){
 					$cell = preg_replace( '/"/' , '""' , $cell);
 				}
-				if( strlen( $cell ) ){
+				if( strlen( $cell ?? '' ) ){
 					$cell = '"'.$cell.'"';
 				}
 				$RTN .= $cell.',';
@@ -1192,7 +1212,7 @@ class filesystem{
 			return false;
 		}
 		$perm = rtrim( sprintf( "%o\n" , fileperms( $path ) ) );
-		$start = strlen( $perm ) - 3;
+		$start = strlen( $perm ?? '' ) - 3;
 		return substr( $perm , $start , 3 );
 	}//get_permission()
 
@@ -1218,7 +1238,7 @@ class filesystem{
 			array_push( $RTN , $ent );
 		}
 		closedir($dr);
-		if( strlen( $this->filesystem_encoding ) ){
+		if( strlen( $this->filesystem_encoding ?? '' ) ){
 			//PxFW 0.6.4 追加
 			$RTN = @$this->convert_filesystem_encoding( $RTN );
 		}
@@ -1366,7 +1386,7 @@ class filesystem{
 	 */
 	public function compare_dir( $dir_a , $dir_b , $options = array() ){
 
-		if( strlen( $this->filesystem_encoding ) ){
+		if( strlen( $this->filesystem_encoding ?? '' ) ){
 			//PxFW 0.6.4 追加
 			$dir_a = @$this->convert_filesystem_encoding( $dir_a );
 			$dir_b = @$this->convert_filesystem_encoding( $dir_b );
@@ -1533,7 +1553,7 @@ class filesystem{
 		if( !is_callable( 'mb_internal_encoding' ) ){
 			return $text;
 		}
-		if( !strlen( $this->filesystem_encoding ) ){
+		if( !strlen( $this->filesystem_encoding ?? '' ) ){
 			return $text;
 		}
 
@@ -1559,14 +1579,14 @@ class filesystem{
 		}
 
 		$to_encoding_fin = $to_encoding;
-		if( !strlen($to_encoding_fin) ){
+		if( !strlen($to_encoding_fin ?? '') ){
 			$to_encoding_fin = mb_internal_encoding();
 		}
-		if( !strlen($to_encoding_fin) ){
+		if( !strlen($to_encoding_fin ?? '') ){
 			$to_encoding_fin = 'UTF-8';
 		}
 
-		$from_encoding_fin = (strlen($from_encoding)?$from_encoding.',':'').mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
+		$from_encoding_fin = (strlen($from_encoding ?? '') ? $from_encoding.',' : '').mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII';
 
 		// ---
 		if( is_array( $text ) ){
@@ -1578,7 +1598,7 @@ class filesystem{
 				$RTN[$key] = $this->convert_encoding( $row, $to_encoding, $from_encoding );
 			}
 		}else{
-			if( !strlen( $text ) ){
+			if( !strlen( $text ?? '' ) ){
 				return $text;
 			}
 			$RTN = mb_convert_encoding( $text, $to_encoding_fin, $from_encoding_fin );
@@ -1594,7 +1614,7 @@ class filesystem{
 	 * @return string 改行コード変換後のテキスト
 	 */
 	public function convert_crlf( $text, $crlf = null ){
-		if( !strlen($crlf) ){
+		if( !strlen($crlf ?? '') ){
 			$crlf = 'LF';
 		}
 		$crlf_code = "\n";
@@ -1620,7 +1640,7 @@ class filesystem{
 				$RTN[$key] = $this->convert_crlf( $val , $crlf );
 			}
 		}else{
-			if( !strlen( $text ) ){
+			if( !strlen( $text ?? '' ) ){
 				return $text;
 			}
 			$RTN = preg_replace( '/\r\n|\r|\n/', $crlf_code, $text );
@@ -1710,16 +1730,16 @@ class request{
 		if( !array_key_exists( 'argv' , $this->conf->server ) ){
 			$this->conf->server['argv'] = null;
 		}
-		if(!property_exists($this->conf, 'session_name') || !@strlen($this->conf->session_name)){
+		if(!property_exists($this->conf, 'session_name') || !strlen($this->conf->session_name ?? '')){
 			$this->conf->session_name = 'SESSID';
 		}
-		if(!property_exists($this->conf, 'session_expire') || !@strlen($this->conf->session_expire)){
+		if(!property_exists($this->conf, 'session_expire') || !strlen($this->conf->session_expire ?? '')){
 			$this->conf->session_expire = 1800;
 		}
-		if(!property_exists($this->conf, 'directory_index_primary') || !@strlen($this->conf->directory_index_primary)){
+		if(!property_exists($this->conf, 'directory_index_primary') || !strlen($this->conf->directory_index_primary ?? '')){
 			$this->conf->directory_index_primary = 'index.html';
 		}
-		if(!property_exists($this->conf, 'cookie_default_path') || !@strlen($this->conf->cookie_default_path)){
+		if(!property_exists($this->conf, 'cookie_default_path') || !strlen($this->conf->cookie_default_path ?? '')){
 			// クッキーのデフォルトのパス
 			// session の範囲もこの設定に従う。
 			$this->conf->cookie_default_path = $this->get_path_current_dir();
@@ -1742,7 +1762,7 @@ class request{
 	 */
 	private function parse_input(){
 		$this->request_file_path = $this->conf->server['PATH_INFO'];
-		if( !strlen($this->request_file_path) ){
+		if( !strlen($this->request_file_path ?? '') ){
 			$this->request_file_path = '/';
 		}
 		$this->cli_params = array();
@@ -1955,10 +1975,10 @@ class request{
 	public function set_cookie( $key , $val , $expire = null , $path = null , $domain = null , $secure = true ){
 		if( is_null( $path ) ){
 			$path = $this->conf->cookie_default_path;
-			if( !strlen( $path ) ){
+			if( !strlen( $path ?? '' ) ){
 				$path = $this->get_path_current_dir();
 			}
-			if( !strlen( $path ) ){
+			if( !strlen( $path ?? '' ) ){
 				$path = '/';
 			}
 		}
@@ -1998,14 +2018,14 @@ class request{
 		$expire = intval($this->conf->session_expire);
 		$cache_limiter = 'nocache';
 		$session_name = 'SESSID';
-		if( strlen( $this->conf->session_name ) ){
+		if( strlen( $this->conf->session_name ?? '' ) ){
 			$session_name = $this->conf->session_name;
 		}
 		$path = $this->conf->cookie_default_path;
-		if( !strlen( $path ) ){
+		if( !strlen( $path ?? '' ) ){
 			$path = $this->get_path_current_dir();
 		}
-		if( !strlen( $path ) ){
+		if( !strlen( $path ?? '' ) ){
 			$path = '/';
 		}
 
@@ -2024,7 +2044,7 @@ class request{
 			//  セッションクッキー自体の寿命は定めない(=0)
 			//  そのかわり、SESSION_LAST_MODIFIED を新設し、自分で寿命を管理する。
 
-		if( strlen( $sid ) ){
+		if( strlen( $sid ?? '' ) ){
 			// セッションIDに指定があれば、有効にする。
 			session_id( $sid );
 		}
@@ -2033,7 +2053,7 @@ class request{
 		$rtn = @session_start();
 
 		// セッションの有効期限を評価
-		if( strlen( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) && intval( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) < intval( time() - $expire ) ){
+		if( strlen( $this->get_session( 'SESSION_LAST_MODIFIED' ) ?? '' ) && intval( $this->get_session( 'SESSION_LAST_MODIFIED' ) ) < intval( time() - $expire ) ){
 			#	セッションの有効期限が切れていたら、セッションキーを再発行。
 			if( is_callable('session_regenerate_id') ){
 				@session_regenerate_id( true );
@@ -2137,21 +2157,23 @@ class request{
 	 * @return array|bool 成功時、ファイル情報 を格納した連想配列、失敗時 `false` を返します。
 	 */
 	public function get_uploadfile( $key ){
-		if(!strlen($key)){ return false; }
-		if( @!is_array( $_SESSION ) ){
+		if(!strlen($key ?? '')){
 			return false;
 		}
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !is_array( $_SESSION ?? null ) ){
 			return false;
 		}
-		if( @!array_key_exists($key, $_SESSION['FILE']) ){
+		if( !array_key_exists('FILE', $_SESSION) ){
+			return false;
+		}
+		if( !array_key_exists($key, $_SESSION['FILE'] ?? array()) ){
 			return false;
 		}
 
-		$rtn = @$_SESSION['FILE'][$key];
+		$rtn = $_SESSION['FILE'][$key] ?? null;
 		if( is_null( $rtn ) ){ return false; }
 
-		$rtn['content'] = base64_decode( @$rtn['content'] );
+		$rtn['content'] = base64_decode( $rtn['content'] ?? '' );
 		return	$rtn;
 	}
 	/**
@@ -2160,7 +2182,7 @@ class request{
 	 * @return array ファイル情報 を格納した連想配列
 	 */
 	public function get_uploadfile_list(){
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !array_key_exists('FILE', $_SESSION ?? array()) ){
 			return false;
 		}
 		return	array_keys( $_SESSION['FILE'] );
@@ -2172,7 +2194,7 @@ class request{
 	 * @return bool 常に `true` を返します。
 	 */
 	public function delete_uploadfile( $key ){
-		if( @!array_key_exists('FILE', $_SESSION) ){
+		if( !array_key_exists('FILE', $_SESSION ?? array()) ){
 			return true;
 		}
 		unset( $_SESSION['FILE'][$key] );
@@ -2196,8 +2218,8 @@ class request{
 	 * @return string USER_AGENT
 	 */
 	public function get_user_agent(){
-		return @$this->conf->server['HTTP_USER_AGENT'];
-	}//get_user_agent()
+		return $this->conf->server['HTTP_USER_AGENT'] ?? null;
+	}
 
 	/**
 	 * リクエストパスを取得する。
@@ -2206,7 +2228,7 @@ class request{
 	 */
 	public function get_request_file_path(){
 		return $this->request_file_path;
-	}//get_request_file_path()
+	}
 
 	/**
 	 *  SSL通信か調べる
@@ -2214,7 +2236,7 @@ class request{
 	 * @return bool SSL通信の場合 `true`、それ以外の場合 `false` を返します。
 	 */
 	public function is_ssl(){
-		if( @$this->conf->server['HTTP_SSL'] || @$this->conf->server['HTTPS'] ){
+		if( $this->conf->server['HTTP_SSL'] ?? null || $this->conf->server['HTTPS'] ?? null ){
 			// SSL通信が有効か否か判断
 			return true;
 		}
@@ -2227,7 +2249,7 @@ class request{
 	 * @return bool コマンドからの実行の場合 `true`、ウェブからの実行の場合 `false` を返します。
 	 */
 	public function is_cmd(){
-		if( array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+		if( array_key_exists( 'REMOTE_ADDR' , $this->conf->server ?? array() ) ){
 			return false;
 		}
 		return	true;
@@ -2246,8 +2268,8 @@ class request{
 	 */
 	private static function convert_encoding( $text, $encode = null, $encodefrom = null ){
 		if( !is_callable( 'mb_internal_encoding' ) ){ return $text; }
-		if( !strlen( $encodefrom ) ){ $encodefrom = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII'; }
-		if( !strlen( $encode ) ){ $encode = mb_internal_encoding(); }
+		if( !strlen( $encodefrom ?? '' ) ){ $encodefrom = mb_internal_encoding().',UTF-8,SJIS-win,eucJP-win,SJIS,EUC-JP,JIS,ASCII'; }
+		if( !strlen( $encode ?? '' ) ){ $encode = mb_internal_encoding(); }
 
 		if( is_array( $text ) ){
 			$rtn = array();
@@ -2256,14 +2278,16 @@ class request{
 			foreach( $TEXT_KEYS as $Line ){
 				$KEY = mb_convert_encoding( $Line , $encode , $encodefrom );
 				if( is_array( $text[$Line] ) ){
-					$rtn[$KEY] = self::convert_encoding( $text[$Line] , $encode , $encodefrom );
+					$rtn[$KEY] = self::convert_encoding( $text[$Line], $encode, $encodefrom );
 				}else{
-					$rtn[$KEY] = @mb_convert_encoding( $text[$Line] , $encode , $encodefrom );
+					$rtn[$KEY] = @mb_convert_encoding( $text[$Line], $encode, $encodefrom );
 				}
 			}
 		}else{
-			if( !strlen( $text ) ){ return $text; }
-			$rtn = @mb_convert_encoding( $text , $encode , $encodefrom );
+			if( !strlen( $text ?? '' ) ){
+				return $text;
+			}
+			$rtn = @mb_convert_encoding( $text, $encode, $encodefrom );
 		}
 		return $rtn;
 	}
@@ -2297,7 +2321,7 @@ class request{
 	private function get_path_current_dir(){
 		//  環境変数から自動的に判断。
 		$rtn = dirname( $this->conf->server['SCRIPT_NAME'] );
-		if( !array_key_exists( 'REMOTE_ADDR' , $this->conf->server ) ){
+		if( !array_key_exists( 'REMOTE_ADDR', $this->conf->server ) ){
 			//  CUIから起動された場合
 			//  ドキュメントルートが判定できないので、
 			//  ドキュメントルート直下にあるものとする。
@@ -2306,7 +2330,7 @@ class request{
 		$rtn = str_replace('\\','/',$rtn);
 		$rtn .= ($rtn!='/'?'/':'');
 		return $rtn;
-	}//get_path_current_dir()
+	}
 
 }
 ?><?php
@@ -2332,7 +2356,7 @@ class user{
 	 */
 	public function is_login(){
 		$login_id = $this->get_user_id();
-		return !!strlen($login_id);
+		return !!strlen($login_id ?? '');
 	}
 
 	/**
@@ -2484,7 +2508,7 @@ class login{
 		$login_id = $this->rencon->req()->get_param('login_id');
 		$login_pw = $this->rencon->req()->get_param('login_pw');
 		$login_try = $this->rencon->req()->get_param('login_try');
-		if( strlen( $login_try ) && strlen($login_id) && strlen($login_pw) ){
+		if( strlen( $login_try ?? '' ) && strlen($login_id ?? '') && strlen($login_pw ?? '') ){
 			// ログイン評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == sha1($login_pw) ){
 				$this->rencon->req()->set_session($ses_id, $login_id);
@@ -2497,7 +2521,7 @@ class login{
 
 		$login_id = $this->rencon->req()->get_session($ses_id);
 		$login_pw_hash = $this->rencon->req()->get_session($ses_pw);
-		if( strlen($login_id) && strlen($login_pw_hash) ){
+		if( strlen($login_id ?? '') && strlen($login_pw_hash ?? '') ){
 			// ログイン済みか評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 				return true;
@@ -2532,7 +2556,7 @@ class login{
 	<body>
 		<div class="theme-container">
 			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
-			<?php if( strlen($this->rencon->req()->get_param('login_try')) ){ ?>
+			<?php if( strlen($this->rencon->req()->get_param('login_try') ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div>IDまたはパスワードが違います。</div>
 				</div>

@@ -35,7 +35,7 @@ class login{
 		$login_id = $this->rencon->req()->get_param('login_id');
 		$login_pw = $this->rencon->req()->get_param('login_pw');
 		$login_try = $this->rencon->req()->get_param('login_try');
-		if( strlen( $login_try ) && strlen($login_id) && strlen($login_pw) ){
+		if( strlen( $login_try ?? '' ) && strlen($login_id ?? '') && strlen($login_pw ?? '') ){
 			// ログイン評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == sha1($login_pw) ){
 				$this->rencon->req()->set_session($ses_id, $login_id);
@@ -48,7 +48,7 @@ class login{
 
 		$login_id = $this->rencon->req()->get_session($ses_id);
 		$login_pw_hash = $this->rencon->req()->get_session($ses_pw);
-		if( strlen($login_id) && strlen($login_pw_hash) ){
+		if( strlen($login_id ?? '') && strlen($login_pw_hash ?? '') ){
 			// ログイン済みか評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 				return true;
@@ -83,7 +83,7 @@ class login{
 	<body>
 		<div class="theme-container">
 			<h1><?= htmlspecialchars( $this->app_info->name ) ?></h1>
-			<?php if( strlen($this->rencon->req()->get_param('login_try')) ){ ?>
+			<?php if( strlen($this->rencon->req()->get_param('login_try') ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div>IDまたはパスワードが違います。</div>
 				</div>

@@ -60,7 +60,7 @@ class writer {
 	 * スキャン済みのパッケージか調べる
 	 */
 	public function is_scaned( $package_name ){
-		if( !strlen($package_name) ){
+		if( !strlen($package_name ?? '') ){
 			$package_name = '';
 		}
 		if( array_key_exists( $package_name, $this->require_files ) ){
@@ -74,7 +74,7 @@ class writer {
 	 * PHPコードを加える
 	 */
 	public function require( $package_name, $realpath ){
-		if( !strlen($package_name) ){
+		if( !strlen($package_name ?? '') ){
 			$package_name = '';
 		}
 		if( !array_key_exists($package_name, $this->require_files) ){
@@ -171,7 +171,7 @@ class writer {
 		}else{
 			$src_config_template = '$conf = new \stdClass();';
 		}
-		$src_config_template = trim($src_config_template);
+		$src_config_template = trim($src_config_template ?? '');
 		$src_config_template = preg_replace('/^\<\?php/', '', $src_config_template);
 		$src_config_template = preg_replace('/\?\>$/', '', $src_config_template);
 
@@ -219,7 +219,7 @@ class writer {
 
 		foreach( $this->require_files as $package_name => $files ){
 			foreach( $files as $file ){
-				if( !preg_match('/\.php$/i', $file) ){
+				if( !preg_match('/\.php$/i', $file ?? '') ){
 					continue;
 				}
 				$bin = file_get_contents($file);

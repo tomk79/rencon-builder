@@ -20,7 +20,7 @@ class dependencies {
 		$this->writer = $writer;
 		$this->package_name = $package_name;
 
-		if( strlen($this->package_name) ){
+		if( strlen($this->package_name ?? '') ){
 			echo ' - '.$this->package_name."\n";
 		}
 	}
@@ -35,17 +35,17 @@ class dependencies {
 			// すでにスキャン済みのパッケージならスキップ
 			return;
 		}
-		if( strtolower($this->package_name) == 'php' ){
+		if( strtolower($this->package_name ?? '') == 'php' ){
 			// PHPのバージョン制約はスキップ
 			return;
 		}
-		if( preg_match('/^ext\-[a-z0-9\_\-]*$/i', $this->package_name) ){
+		if( preg_match('/^ext\-[a-z0-9\_\-]*$/i', $this->package_name ?? '') ){
 			// PHP拡張のバージョン制約はスキップ
 			return;
 		}
 
 		$path_basedir = './';
-		if( strlen($this->package_name) ){
+		if( strlen($this->package_name ?? '') ){
 			$path_basedir = './vendor/'.$this->package_name.'/';
 		}
 
@@ -93,7 +93,7 @@ class dependencies {
 	 */
 	private function require_php_in_directory( $rootdir ){
 		$path_basedir = './';
-		if( strlen($this->package_name) ){
+		if( strlen($this->package_name ?? '') ){
 			$path_basedir = './vendor/'.$this->package_name.'/';
 		}
 
@@ -118,7 +118,7 @@ class dependencies {
 	 */
 	private function load_composer_json(){
 		$path_json = './composer.json';
-		if( strlen($this->package_name) ){
+		if( strlen($this->package_name ?? '') ){
 			$path_json = './vendor/'.$this->package_name.'/composer.json';
 		}
 

@@ -59,13 +59,13 @@ class main {
 		$this->writer = new writer($this->utils, $renconBuilderJson);
 		$this->writer->set_version( $version );
 		$app_name = $renconBuilderJson->name;
-		if( !strlen($app_name) ){
+		if( !strlen($app_name ?? '') ){
 			$app_name = $composerJson->name;
 		}
 		$this->writer->set_app_name( $app_name );
 		$app_id = $renconBuilderJson->app_id;
-		if( !strlen($app_id) ){
-			$app_id = preg_replace('/^.*\/(.*?)$/', '$1', $composerJson->name);
+		if( !strlen($app_id ?? '') ){
+			$app_id = preg_replace('/^.*\/(.*?)$/', '$1', $composerJson->name ?? '');
 		}
 		$this->writer->set_app_id( $app_id );
 

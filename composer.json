@@ -12,17 +12,18 @@
     "scripts":{
         "build": [
             "php ./build/pre-build.php",
-            "php ./build/box.phar build"
+            "php ./build/box.phar compile"
         ],
         "test": [
             "php ./vendor/phpunit/phpunit/phpunit"
         ]
     } ,
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true,
     "repositories": [
     ],
     "require": {
+		"php": ">=7.3.0" ,
         "tomk79/filesystem": "^1.0",
         "tomk79/request": "^1.1"
     },

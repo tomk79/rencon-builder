@@ -14,8 +14,13 @@ namespace renconFramework;
 // =-=-=-=-=-=-=-=-=-=-=-= / Configuration END =-=-=-=-=-=-=-=-=-=-=-=
 
 
+if( !isset($conf) ){
+	$conf = new \stdClass();
+}
+$conf = (object) $conf;
 $rencon = new rencon( $conf );
 $rencon->run();
+exit();
 
 class rencon {
 

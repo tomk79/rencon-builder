@@ -6,7 +6,7 @@ namespace renconFramework;
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
-class conf{
+class conf {
 	private $conf;
 	private $custom_dynamic_property = array();
 	public $users;

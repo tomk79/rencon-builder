@@ -13,6 +13,9 @@ class auth{
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
 
+	/** CSRFトークンの有効期限 */
+	private $csrf_token_expire = 60 * 60;
+
 	/**
 	 * Constructor
 	 */

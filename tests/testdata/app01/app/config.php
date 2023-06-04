@@ -13,6 +13,11 @@ $conf = new \stdClass();
  */
 $conf->users = array(
 	"admin" => sha1("admin"),
+	"admin2" => array(
+		"name" => "Admin 2",
+		"id" => "admin2",
+		"pw" => sha1("admin2"),
+	),
 );
 
 /* --------------------------------------

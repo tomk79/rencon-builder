@@ -24,6 +24,11 @@ $conf = new \stdClass();
  */
 $conf->users = array(
 	"admin" => sha1("admin"),
+	"admin2" => array(
+		"name" => "Admin 2",
+		"id" => "admin2",
+		"pw" => sha1("admin2"),
+	),
 );
 
 /* --------------------------------------
@@ -606,17 +611,6 @@ class conf {
 		}
 		return false;
 	}
-
-	/**
-	 * ログインが必要か？
-	 */
-	public function is_login_required(){
-		if( !is_array($this->users) ){
-			return false;
-		}
-		return true;
-	}
-
 }
 ?><?php
 /**
@@ -2887,7 +2881,7 @@ foreach( $app_info->pages as $pid=>$page_info ){
 
 <hr />
 
-<?php if( $rencon->conf()->is_login_required() && $rencon->user()->is_login() ) { ?>
+<?php if( $rencon->auth()->is_login_required() && $rencon->user()->is_login() ) { ?>
 <p>
     <a href="?a=logout">Logout</a>
 </p>
@@ -2936,7 +2930,7 @@ class auth{
 	 */
 	public function auth(){
 
-		if( !$this->rencon->conf()->is_login_required() ){
+		if( !$this->is_login_required() ){
 			// ユーザーが設定されていなければ、ログインの評価を行わない。
 			return;
 		}
@@ -2948,15 +2942,6 @@ class auth{
 		if( $this->rencon->req()->get_param('ADMIN_USER_FLG') ){
 			$login_challenger_id = $this->rencon->req()->get_param('ADMIN_USER_ID');
 			$login_challenger_pw = $this->rencon->req()->get_param('ADMIN_USER_PW');
-			if( strlen($login_challenger_id ?? '') && strlen($login_challenger_pw ?? '') ){
-				// ログイン評価
-				if( array_key_exists($login_challenger_id, $users) && $users[$login_challenger_id] == sha1($login_challenger_pw) ){
-					$this->rencon->req()->set_session($ses_id, $login_challenger_id);
-					$this->rencon->req()->set_session($ses_pw, sha1($login_challenger_pw));
-					header('Location: ?a='.urlencode($this->rencon->req()->get_param('a')));
-					exit;
-				}
-			}
 
 			$user_info = $this->get_admin_user_info( $login_challenger_id );
 			if( !is_object($user_info) ){
@@ -2967,17 +2952,14 @@ class auth{
 			$admin_id = $user_info->id;
 			$admin_pw = $user_info->pw;
 
-			if( $login_challenger_id == $admin_id && password_verify($login_challenger_pw, $admin_pw) ){
-				$this->rencon->req()->set_session($ses_id, $login_challenger_id);
-				$this->rencon->req()->set_session($ses_pw, $user_info->pw);
-
-				$redirect_to = '?';
-				if( is_string($this->rencon->req()->get_param('a')) ){
-					$redirect_to = '?a='.htmlspecialchars( $this->rencon->req()->get_param('a') ?? '' );
+			if( strlen($login_challenger_id ?? '') && strlen($login_challenger_pw ?? '') ){
+				// ログイン評価
+				if( $login_challenger_id == $admin_id && (password_verify($login_challenger_pw, $user_info->pw) || sha1($login_challenger_pw) == $user_info->pw) ){
+					$this->rencon->req()->set_session($ses_id, $login_challenger_id);
+					$this->rencon->req()->set_session($ses_pw, $user_info->pw);
+					header('Location: ?a='.urlencode($this->rencon->req()->get_param('a') ?? ''));
+					exit;
 				}
-				$this->rencon->req()->set_cookie('LANG', $user_info->lang);
-				header('Location:'.$redirect_to);
-				exit;
 			}
 
 
@@ -3055,6 +3037,7 @@ class auth{
 </table>
 <p><button type="submit">Login</button></p>
 <input type="hidden" name="ADMIN_USER_FLG" value="1" />
+<input type="hidden" name="ADMIN_USER_CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
 			</form>
 		</div>
@@ -3210,6 +3193,16 @@ class auth{
 	}
 
 	/**
+	 * ログインが必要か？
+	 */
+	public function is_login_required(){
+		if( !is_array($this->rencon->conf()->users ?? null) ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * ログインしているか確認する
 	 */
 	public function is_login(){
@@ -3291,6 +3284,20 @@ class auth{
 			return null;
 		}
 
+		$users = (array) $this->rencon->conf()->users;
+		if( is_string($users[$user_id] ?? null) ){
+			return (object) array(
+				"name" => $user_id,
+				"id" => $user_id,
+				"pw" => $users[$user_id],
+				"lang" => null,
+				"email" => null,
+				"role" => "admin",
+			);
+		}elseif( is_array($users[$user_id] ?? null) || is_object($users[$user_id] ?? null) || is_string($users[$user_id] ?? null) ){
+			return (object) $users[$user_id];
+		}
+
 		$user_info = null;
 		if( is_dir($this->realpath_admin_users) && $this->rencon->fs()->ls($this->realpath_admin_users) ){
 			if( $this->admin_user_data_exists( $user_id ) ){
@@ -3301,7 +3308,7 @@ class auth{
 				}
 			}
 		}
-		return $user_info;
+		return (object) $user_info;
 	}
 
 	/**

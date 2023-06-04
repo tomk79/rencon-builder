@@ -30,7 +30,7 @@ foreach( $app_info->pages as $pid=>$page_info ){
 
 <hr />
 
-<?php if( $rencon->conf()->is_login_required() && $rencon->user()->is_login() ) { ?>
+<?php if( $rencon->auth()->is_login_required() && $rencon->user()->is_login() ) { ?>
 <p>
     <a href="?a=logout">Logout</a>
 </p>

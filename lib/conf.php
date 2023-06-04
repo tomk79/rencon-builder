@@ -77,16 +77,5 @@ class conf {
 		}
 		return false;
 	}
-
-	/**
-	 * ログインが必要か？
-	 */
-	public function is_login_required(){
-		if( !is_array($this->users) ){
-			return false;
-		}
-		return true;
-	}
-
 }
 ?>

@@ -84,6 +84,10 @@ class rencon {
 		}
 
 		// --------------------------------------
+		// 初期化処理
+		$initializer = new initializer( $this );
+
+		// --------------------------------------
 		// ログイン処理
 		$login = new login($this, $app_info);
 

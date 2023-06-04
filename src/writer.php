@@ -198,8 +198,10 @@ class writer {
 		$framework = str_replace('array(/* middleware */)', $src_middleware, $framework);
 		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;
+		unset($framework);
 
 
+		$rtn .= $framework_files->get('initializer');
 		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
@@ -208,6 +210,7 @@ class writer {
 		$src_theme = $framework_files->get('theme');
 		$src_theme = str_replace('/* theme template */', $src_template, $src_theme);
 		$rtn .= $src_theme;
+		unset($src_theme);
 
 
 		$src_login = $framework_files->get('login');
@@ -216,6 +219,7 @@ class writer {
 		$src_login = str_replace('/* route:login */', $src_route_login, $src_login);
 		$src_login = str_replace('/* route:logout */', $src_route_logout, $src_login);
 		$rtn .= $src_login;
+		unset($src_login);
 
 		foreach( $this->require_files as $package_name => $files ){
 			foreach( $files as $file ){

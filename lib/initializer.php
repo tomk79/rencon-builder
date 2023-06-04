@@ -6,11 +6,8 @@ namespace renconFramework;
  */
 class initializer {
 
-	/** Cloverオブジェクト */
-	private $clover;
-
-	/** Picklesオブジェクト */
-	private $px;
+	/** renconオブジェクト */
+	private $rencon;
 
 	/** 管理データ定義ディレクトリ */
 	private $realpath_private_data_dir;
@@ -18,14 +15,10 @@ class initializer {
 	/**
 	 * Constructor
 	 *
-	 * @param object $clover $cloverオブジェクト
+	 * @param object $rencon $renconオブジェクト
 	 */
-	public function __construct( $clover ){
-		$this->clover = $clover;
-		$this->px = $this->clover->px();
-
-		// 管理データ定義ディレクトリ
-		$this->realpath_private_data_dir = $this->clover->realpath_private_data_dir();
+	public function __construct( $rencon ){
+		$this->rencon = $rencon;
 	}
 
 
@@ -33,6 +26,7 @@ class initializer {
 	 * 初期化プロセス
 	 */
 	public function initialize(){
+return;
 		if( !is_dir($this->realpath_private_data_dir) ){
 			$this->px->fs()->mkdir_r($this->realpath_private_data_dir);
 		}
@@ -52,6 +46,7 @@ class initializer {
 	 * 管理ユーザーデータを初期化する画面
 	 */
 	private function initialize_admin_user_page(){
+return;
 		$result = (object) array(
 			"result" => null,
 			"message" => null,

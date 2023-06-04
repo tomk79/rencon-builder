@@ -46,7 +46,7 @@ class theme{
 	 * テーマにコンテンツを包んで返す
 	 */
 	public function bind( $content ){
-		$action_ary = explode('.', $this->rencon->req()->get_param('a'));
+		$action_ary = explode('.', $this->rencon->req()->get_param('a') ?? '');
 		if( !is_array($action_ary) || !count($action_ary) ){
 			$action_ary[0] = '';
 		}

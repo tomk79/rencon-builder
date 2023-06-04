@@ -22,7 +22,7 @@ class auth{
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
-		if( !is_dir($this->realpath_admin_users) ){
+		if( is_string($this->realpath_admin_users ?? null) && !is_dir($this->realpath_admin_users) ){
 			$this->rencon->fs()->mkdir_r($this->realpath_admin_users);
 		}
 	}
@@ -298,7 +298,13 @@ class auth{
 	 * ログインが必要か？
 	 */
 	public function is_login_required(){
-		if( !is_array($this->rencon->conf()->users ?? null) ){
+		if( (
+				!is_array($this->rencon->conf()->users ?? null)
+				&& !is_object($this->rencon->conf()->users ?? null)
+			) && (
+				is_null($this->rencon->conf()->realpath_private_data_dir)
+				|| !is_dir($this->rencon->conf()->realpath_private_data_dir)
+			) ){
 			return false;
 		}
 		return true;
@@ -396,7 +402,7 @@ class auth{
 				"email" => null,
 				"role" => "admin",
 			);
-		}elseif( is_array($users[$user_id] ?? null) || is_object($users[$user_id] ?? null) || is_string($users[$user_id] ?? null) ){
+		}elseif( is_array($users[$user_id] ?? null) || is_object($users[$user_id] ?? null) ){
 			return (object) $users[$user_id];
 		}
 
@@ -410,7 +416,7 @@ class auth{
 				}
 			}
 		}
-		return (object) $user_info;
+		return is_null($user_info) ? $user_info : (object) $user_info;
 	}
 
 	/**

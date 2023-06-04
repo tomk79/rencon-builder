@@ -201,6 +201,7 @@ class writer {
 		unset($framework);
 
 
+		$rtn .= $framework_files->get('dataDotPhp');
 		$rtn .= $framework_files->get('initializer');
 		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('filesystem');
@@ -213,7 +214,7 @@ class writer {
 		unset($src_theme);
 
 
-		$src_login = $framework_files->get('login');
+		$src_login = $framework_files->get('auth');
 		$src_login = str_replace('<!-- app_name -->', $this->app_name, $src_login);
 		$src_login = str_replace('<!-- app_id -->', $this->app_id, $src_login);
 		$src_login = str_replace('/* route:login */', $src_route_login, $src_login);

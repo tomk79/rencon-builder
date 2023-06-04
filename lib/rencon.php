@@ -28,6 +28,7 @@ class rencon {
 	private $fs;
 	private $req;
 	private $user;
+	private $auth;
 	private $theme;
 	private $resources;
 
@@ -45,6 +46,7 @@ class rencon {
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function auth(){ return $this->auth; }
 	public function user(){ return $this->user; }
 	public function theme(){ return $this->theme; }
 	public function resources(){ return $this->resources; }
@@ -61,8 +63,8 @@ class rencon {
 
 		);
 
-		$action = $this->req->get_param('a');
-		$resource = $this->req->get_param('res');
+		$action = $this->req->get_param('a') ?? null;
+		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
 			'id' => $this->app_id,
@@ -74,6 +76,7 @@ class rencon {
 			'title' => 'Home',
 		);
 		$this->theme = new theme( $this, $app_info, $page_info );
+		$this->auth = new auth( $this, $app_info );
 
 		// --------------------------------------
 		// リソースへのリクエストを処理
@@ -88,22 +91,15 @@ class rencon {
 		$initializer = new initializer( $this );
 		$initializer->initialize();
 
+
 		// --------------------------------------
 		// ログイン処理
-		$login = new login($this, $app_info);
-
 		if( $action == 'logout' ){
-			$login->logout();
+			$this->auth()->logout();
 			exit;
 		}
 
-		if( !$login->check() ){
-			if( $action == 'logout' || $action == 'login' ){
-				$this->req()->set_param('a', null);
-			}
-			$login->please_login();
-			exit;
-		}
+		$this->auth()->auth();
 
 		if( $action == 'logout' || $action == 'login' ){
 			$this->req()->set_param('a', null);
@@ -141,6 +137,18 @@ class rencon {
 			$this->notfound();
 		}
 		exit();
+	}
+
+
+	/**
+	 * プラグイン専有の非公開データディレクトリの内部パスを取得する
+	 */
+	public function realpath_private_data_dir( $localpath = null ){
+		$realpath_private_data_dir = null;
+		if( property_exists( $this->conf, 'realpath_private_data_dir' ) && is_string( $this->conf->realpath_private_data_dir ) ){
+			$realpath_private_data_dir = $this->fs()->get_realpath($this->conf->realpath_private_data_dir.$localpath);
+		}
+		return $realpath_private_data_dir;
 	}
 
 

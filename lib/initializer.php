@@ -99,9 +99,30 @@ Deny from all
 
 			<form action="?" method="post">
 <table>
-	<tr><th>Name:</th><td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" /></td>
-	<tr><th>ID:</th><td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" /></td>
-	<tr><th>Password:</th><td><input type="password" name="ADMIN_USER_PW" value="" /></td>
+	<tr>
+		<th>Name:</th>
+		<td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" />
+			<?php if( strlen( $result->errors->name[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->name[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>ID:</th>
+		<td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" />
+			<?php if( strlen( $result->errors->id[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->id[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>Password:</th>
+		<td><input type="password" name="ADMIN_USER_PW" value="" />
+			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
 </table>
 <p><button type="submit">Create User</button></p>
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />

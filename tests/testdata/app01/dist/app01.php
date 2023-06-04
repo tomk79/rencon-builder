@@ -55,6 +55,7 @@ class rencon {
 	private $fs;
 	private $req;
 	private $user;
+	private $auth;
 	private $theme;
 	private $resources;
 
@@ -72,6 +73,7 @@ class rencon {
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function auth(){ return $this->auth; }
 	public function user(){ return $this->user; }
 	public function theme(){ return $this->theme; }
 	public function resources(){ return $this->resources; }
@@ -108,8 +110,8 @@ var_dump( $_REQUEST );
 
 		);
 
-		$action = $this->req->get_param('a');
-		$resource = $this->req->get_param('res');
+		$action = $this->req->get_param('a') ?? null;
+		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
 			'id' => $this->app_id,
@@ -121,6 +123,7 @@ var_dump( $_REQUEST );
 			'title' => 'Home',
 		);
 		$this->theme = new theme( $this, $app_info, $page_info );
+		$this->auth = new auth( $this, $app_info );
 
 		// --------------------------------------
 		// リソースへのリクエストを処理
@@ -135,22 +138,15 @@ var_dump( $_REQUEST );
 		$initializer = new initializer( $this );
 		$initializer->initialize();
 
+
 		// --------------------------------------
 		// ログイン処理
-		$login = new login($this, $app_info);
-
 		if( $action == 'logout' ){
-			$login->logout();
+			$this->auth()->logout();
 			exit;
 		}
 
-		if( !$login->check() ){
-			if( $action == 'logout' || $action == 'login' ){
-				$this->req()->set_param('a', null);
-			}
-			$login->please_login();
-			exit;
-		}
+		$this->auth()->auth();
 
 		if( $action == 'logout' || $action == 'login' ){
 			$this->req()->set_param('a', null);
@@ -194,6 +190,18 @@ var_dump( $_REQUEST );
 
 
 	/**
+	 * プラグイン専有の非公開データディレクトリの内部パスを取得する
+	 */
+	public function realpath_private_data_dir( $localpath = null ){
+		$realpath_private_data_dir = null;
+		if( property_exists( $this->conf, 'realpath_private_data_dir' ) && is_string( $this->conf->realpath_private_data_dir ) ){
+			$realpath_private_data_dir = $this->fs()->get_realpath($this->conf->realpath_private_data_dir.$localpath);
+		}
+		return $realpath_private_data_dir;
+	}
+
+
+	/**
 	 * Not Found ページを表示して終了する
 	 */
 	public function notfound(){
@@ -219,6 +227,58 @@ var_dump( $_REQUEST );
 		exit;
 	}
 
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * data.PHP Helper
+ */
+class dataDotPhp{
+
+	private static $src_header = '<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n";
+
+	/**
+	 * JSON.PHP を読み込む
+	 */
+	static public function read_json( $realpath ){
+		if( !is_file($realpath) ){
+			return false;
+		}
+		$jsonDotPhp = file_get_contents($realpath);
+		$jsonDotPhp = preg_replace('/^.*?exit\(\)\;\s*\?\>\s*/is', '', $jsonDotPhp);
+		$json = json_decode($jsonDotPhp);
+		return $json;
+	}
+
+	/**
+	 * JSON.PHP を保存する
+	 */
+	static public function write_json( $realpath, $content ){
+		$jsonString = json_encode($content, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+		$jsonDotPhp = self::$src_header.$jsonString;
+		$result = file_put_contents( $realpath, $jsonDotPhp );
+		return $result;
+	}
+
+	/**
+	 * data.PHP にデータを保存する
+	 */
+	static public function write( $realpath, $text ){
+		$result = file_put_contents( $realpath, self::$src_header.$text );
+		return $result;
+	}
+
+	/**
+	 * data.PHP にデータを追記する
+	 */
+	static public function write_a( $realpath, $text ){
+		if( !is_file($realpath) ){
+			error_log( self::$src_header, 3, $realpath );
+		}
+		error_log( $text, 3, $realpath );
+		return true;
+	}
 }
 ?><?php
 namespace renconFramework;
@@ -321,9 +381,30 @@ Deny from all
 
 			<form action="?" method="post">
 <table>
-	<tr><th>Name:</th><td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" /></td>
-	<tr><th>ID:</th><td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" /></td>
-	<tr><th>Password:</th><td><input type="password" name="ADMIN_USER_PW" value="" /></td>
+	<tr>
+		<th>Name:</th>
+		<td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" />
+			<?php if( strlen( $result->errors->name[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->name[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>ID:</th>
+		<td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" />
+			<?php if( strlen( $result->errors->id[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->id[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>Password:</th>
+		<td><input type="password" name="ADMIN_USER_PW" value="" />
+			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
 </table>
 <p><button type="submit">Create User</button></p>
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
@@ -2825,13 +2906,16 @@ foreach( $app_info->pages as $pid=>$page_info ){
 namespace renconFramework;
 
 /**
- * login class
+ * auth class
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
-class login{
+class auth{
 	private $rencon;
 	private $app_info;
+
+	/** 管理ユーザー定義ディレクトリ */
+	private $realpath_admin_users;
 
 	/**
 	 * Constructor
@@ -2839,16 +2923,22 @@ class login{
 	public function __construct( $rencon, $app_info ){
 		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
+
+		// 管理ユーザー定義ディレクトリ
+		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
+		if( !is_dir($this->realpath_admin_users) ){
+			$this->rencon->fs()->mkdir_r($this->realpath_admin_users);
+		}
 	}
 
 	/**
-	 * ログインしているか調べる
+	 * 認証プロセス
 	 */
-	public function check(){
+	public function auth(){
 
 		if( !$this->rencon->conf()->is_login_required() ){
 			// ユーザーが設定されていなければ、ログインの評価を行わない。
-			return true;
+			return;
 		}
 
 		$users = (array) $this->rencon->conf()->users;
@@ -2864,7 +2954,7 @@ class login{
 				$this->rencon->req()->set_session($ses_id, $login_id);
 				$this->rencon->req()->set_session($ses_pw, sha1($login_pw));
 				header('Location: ?a='.urlencode($this->rencon->req()->get_param('a')));
-				return true;
+				exit;
 			}
 		}
 
@@ -2874,7 +2964,7 @@ class login{
 		if( strlen($login_id ?? '') && strlen($login_pw_hash ?? '') ){
 			// ログイン済みか評価
 			if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
-				return true;
+				return;
 			}
 			$this->rencon->req()->delete_session($ses_id);
 			$this->rencon->req()->delete_session($ses_pw);
@@ -2882,7 +2972,12 @@ class login{
 			exit;
 		}
 
-		return false;
+		$action = $this->rencon->req()->get_param('a') ?? null;
+		if( $action == 'logout' || $action == 'login' ){
+			$this->rencon->req()->set_param('a', null);
+		}
+		$this->please_login();
+		exit;
 	}
 
 	/**
@@ -2914,8 +3009,14 @@ class login{
 
 			<form action="?" method="post">
 <table>
-	<tr><th>ID:</th><td><input type="text" name="login_id" value="" /></td>
-	<tr><th>Password:</th><td><input type="password" name="login_pw" value="" /></td>
+	<tr>
+		<th>ID:</th>
+		<td><input type="text" name="login_id" value="" /></td>
+	</tr>
+	<tr>
+		<th>Password:</th>
+		<td><input type="password" name="login_pw" value="" /></td>
+	</tr>
 </table>
 <p><button type="submit">Login</button></p>
 <input type="hidden" name="login_try" value="1" />
@@ -3073,6 +3174,142 @@ class login{
 		return $src;
 	}
 
+
+	/**
+	 * 管理ユーザーを作成する
+	 *
+	 * @param array|object $user_info 作成するユーザー情報
+	 */
+	public function create_admin_user( $user_info ){
+		$result = (object) array(
+			'result' => true,
+			'message' => 'OK',
+			'errors' => (object) array(),
+		);
+		$user_info = (object) $user_info;
+
+		$user_info_validated = $this->validate_admin_user_info($user_info);
+		if( !$user_info_validated->is_valid ){
+			// 不正な形式のユーザー情報
+			return (object) array(
+				'result' => false,
+				'message' => $user_info_validated->message,
+				'errors' => $user_info_validated->errors,
+			);
+		}
+
+		if( $this->admin_user_data_exists( $user_info->id ) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'そのユーザーIDはすでに存在します。',
+				'errors' => (object) array(),
+			);
+		}
+
+		$user_info->pw = $this->password_hash($user_info->pw);
+		if( !$this->write_admin_user_data($user_info->id, $user_info) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'ユーザー情報の保存に失敗しました。',
+				'errors' => (object) array(),
+			);
+		}
+		return $result;
+	}
+
+	/**
+	 * Validation: ユーザーID
+	 */
+	private function validate_admin_user_id( $user_id ){
+		if( !is_string($user_id) || !strlen($user_id) ){
+			return false;
+		}
+		if( !preg_match('/^[a-zA-Z0-9\_\-]+$/', $user_id) ){
+			// 不正な形式
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Validation: ユーザー情報
+	 */
+	private function validate_admin_user_info( $user_info ){
+		$rtn = (object) array(
+			'is_valid' => true,
+			'message' => null,
+			'errors' => (object) array(),
+		);
+		$user_info = (object) $user_info;
+
+		if( !strlen($user_info->id ?? '') ){
+			// IDが未指定
+			$rtn->is_valid = false;
+			$rtn->errors->id = array('User ID is required.');
+		}elseif( !$this->validate_admin_user_id($user_info->id) ){
+			// 不正な形式のID
+			$rtn->is_valid = false;
+			$rtn->errors->id = array('Malformed User ID.');
+		}
+		if( !isset($user_info->name) || !strlen($user_info->name) ){
+			$rtn->is_valid = false;
+			$rtn->errors->name = array('This is required.');
+		}
+		if( !isset($user_info->pw) || !strlen($user_info->pw) ){
+			$rtn->is_valid = false;
+			$rtn->errors->pw = array('This is required.');
+		}
+		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
+			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
+				$rtn->is_valid = false;
+				$rtn->errors->email = array('Malformed E-mail address.');
+			}
+		}
+		if( $rtn->is_valid ){
+			$rtn->message = 'OK';
+		}else{
+			$rtn->message = 'There is a problem with the input content.';
+		}
+		return $rtn;
+	}
+
+	/**
+	 * 管理ユーザーデータファイルが存在するか確認する
+	 */
+	private function admin_user_data_exists( $user_id ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+		if( is_file( $realpath_json ) || is_file($realpath_json_php) ){
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * パスワードをハッシュ化する
+	 */
+	public function password_hash($password){
+		if( !is_string($password) ){
+			return false;
+		}
+		return password_hash($password, PASSWORD_BCRYPT);
+	}
+
+	/**
+	 * 管理ユーザーデータファイルの書き込み
+	 */
+	private function write_admin_user_data( $user_id, $data ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+		$result = dataDotPhp::write_json($realpath_json_php, $data);
+		if( !$result ){
+			return false;
+		}
+		if( is_file($realpath_json) ){
+			unlink($realpath_json); // 素のJSONがあったら削除する
+		}
+		return $result;
+	}
 }
 ?><?php
 namespace app01\middleware;

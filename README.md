@@ -11,6 +11,7 @@ A one filed PHP framework.
 - `$conf->realpath_private_data_dir` を追加。
 - `rencon-builder.json` に `version` を追加。
 - リソースの `Content-type` ヘッダーが出力されない不具合を修正。
+- 初期セットアップ画面から最初の管理ユーザーを作成できるようになった。
 
 ### tomk79/rencon-builder v0.0.2 (2021年6月17日)
 

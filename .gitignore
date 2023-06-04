@@ -6,3 +6,5 @@ composer.phar
 composer.lock
 
 .phpunit.result.cache
+
+/tests/testdata/app01/dist/app01__data/

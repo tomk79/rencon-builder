@@ -6,7 +6,7 @@ namespace renconFramework;
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
-class user{
+class user {
 	private $rencon;
 
 	/**

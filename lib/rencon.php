@@ -35,9 +35,9 @@ class rencon {
 	private $app_name = '<!-- app_name -->';
 
 	public function __construct( $conf ){
-		$this->conf = new conf( $conf );
 		$this->fs = new filesystem();
 		$this->req = new request();
+		$this->conf = new conf($this, $conf);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
 	}
@@ -86,6 +86,7 @@ class rencon {
 		// --------------------------------------
 		// 初期化処理
 		$initializer = new initializer( $this );
+		$initializer->initialize();
 
 		// --------------------------------------
 		// ログイン処理

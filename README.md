@@ -8,6 +8,7 @@ A one filed PHP framework.
 
 - PHP v8.2 に対応した。
 - `middleware` がセットされていない場合にエラーが起きる不具合を修正。
+- `$conf->realpath_private_data_dir` を追加。
 - `rencon-builder.json` に `version` を追加。
 - リソースの `Content-type` ヘッダーが出力されない不具合を修正。
 

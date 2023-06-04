@@ -15,10 +15,10 @@
             "php ./build/box.phar compile"
         ],
         "preview": [
-            "open http://localhost:8088/app01.php;"
+            "open http://localhost:8088/app01.php"
         ],
         "start": [
-            "php -S localhost:8088 -t ./tests/testdata/app01/dist/;"
+            "php -S localhost:8088 -t ./tests/testdata/app01/dist/"
         ],
         "test": [
             "php ./vendor/phpunit/phpunit/phpunit"

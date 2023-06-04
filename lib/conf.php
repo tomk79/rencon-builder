@@ -7,15 +7,18 @@ namespace renconFramework;
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
 class conf {
+	private $rencon;
 	private $conf;
 	private $custom_dynamic_property = array();
 	public $users;
+	public $realpath_private_data_dir;
 	public $databases;
 
 	/**
 	 * Constructor
 	 */
-	public function __construct( $conf ){
+	public function __construct( $rencon, $conf ){
+		$this->rencon = $rencon;
 		$this->conf = (object) $conf;
 		foreach( $this->conf as $key=>$val ){
 			$this->{$key} = $val;
@@ -29,12 +32,18 @@ class conf {
 		}
 
 		// --------------------------------------
+		// $conf->realpath_private_data_dir
+		$this->realpath_private_data_dir = null;
+		if( property_exists( $conf, 'realpath_private_data_dir' ) && is_string( $conf->realpath_private_data_dir ) ){
+			$this->realpath_private_data_dir = $this->rencon->fs()->get_realpath($conf->realpath_private_data_dir);
+		}
+
+		// --------------------------------------
 		// $conf->databases
 		$this->databases = null;
 		if( property_exists( $conf, 'databases' ) && !is_null( $conf->databases ) ){
 			$this->databases = (array) $conf->databases;
 		}
-
 	}
 
 	/**

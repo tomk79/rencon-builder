@@ -35,6 +35,8 @@ class rencon {
 	private $app_id = '<!-- app_id -->';
 	private $app_name = '<!-- app_name -->';
 
+	private $route;
+
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
@@ -57,7 +59,7 @@ class rencon {
 	public function run(){
 		header('Content-type: text/html'); // default
 
-		$route = array(
+		$this->route = array(
 
 /* router */
 
@@ -69,7 +71,7 @@ class rencon {
 		$app_info = array(
 			'id' => $this->app_id,
 			'name' => $this->app_name,
-			'pages' => $route,
+			'pages' => $this->route,
 		);
 		$page_info = array(
 			'id' => $action,
@@ -120,8 +122,8 @@ class rencon {
 
 		// --------------------------------------
 		// コンテンツを処理
-		if( array_key_exists( $action, $route ) ){
-			$controller = $route[$action];
+		$controller = $this->route($action);
+		if( $controller ){
 			$page_info['title'] = $controller->title;
 			$this->theme()->set_current_page_info( $page_info );
 
@@ -137,6 +139,45 @@ class rencon {
 			$this->notfound();
 		}
 		exit();
+	}
+
+	/**
+	 * ルーティング処理
+	 */
+	private function route( $action ){
+
+		// 静的固定ルート
+		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
+			$controller = $this->route[$action];
+			return $controller;
+		}
+
+		// 動的ルート
+		$dynamicKeys = array();
+		foreach( $this->route as $action_key => $controller ){
+			$action_key = preg_replace('/\./', '\\\\.', $action_key);
+			$action_ptn = '';
+			while(1){
+				if( !preg_match('/^(.*?)\{([a-zA-Z][a-zA-Z0-9]*)\?\}(.*)$/', $action_key, $matched) ){
+					$action_ptn .= $action_key;
+					break;
+				}
+				$action_ptn .= $matched[1];
+				array_push($dynamicKeys, $matched[2]);
+				$action_ptn .= '([^\.]*)';
+				$action_key = $matched[3];
+			}
+			if( preg_match('/^'.$action_ptn.'$/', $action, $matched) ){
+				$routeParams = array();
+				foreach( $dynamicKeys as $index => $key ){
+					$routeParams[$key] = $matched[$index + 1];
+				}
+				$controller->params = (object) $routeParams;
+				return $controller;
+			}
+		}
+
+		return null;
 	}
 
 

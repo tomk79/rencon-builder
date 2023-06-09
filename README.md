@@ -10,6 +10,7 @@ A one filed PHP framework.
 - `middleware` がセットされていない場合にエラーが起きる不具合を修正。
 - `$conf->realpath_private_data_dir` を追加。
 - `rencon-builder.json` に `version` を追加。
+- 動的ルーティング機能を追加。
 - リソースの `Content-type` ヘッダーが出力されない不具合を修正。
 - 初期セットアップ画面から最初の管理ユーザーを作成できるようになった。
 

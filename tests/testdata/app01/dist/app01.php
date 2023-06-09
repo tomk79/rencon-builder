@@ -67,6 +67,8 @@ class rencon {
 	private $app_id = 'app01';
 	private $app_name = 'Application Sample';
 
+	private $route;
+
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
@@ -89,7 +91,7 @@ class rencon {
 	public function run(){
 		header('Content-type: text/html'); // default
 
-		$route = array(
+		$this->route = array(
 
 '' => (object) array(
 	"title" => 'Home',
@@ -107,6 +109,10 @@ var_dump( $_REQUEST );
 <p><img src="?res=images/sample-gif.gif" /></p>
 <?php return; },
 ),
+'dynamic.{routeParam1?}.route' => (object) array(
+	"title" => 'Dinamic route',
+	"page" => 'app01\\dinamicRoute::start',
+),
 'test' => (object) array(
 	"title" => 'Test',
 	"page" => 'app01\\test::start',
@@ -121,7 +127,7 @@ var_dump( $_REQUEST );
 		$app_info = array(
 			'id' => $this->app_id,
 			'name' => $this->app_name,
-			'pages' => $route,
+			'pages' => $this->route,
 		);
 		$page_info = array(
 			'id' => $action,
@@ -174,8 +180,8 @@ var_dump( $_REQUEST );
 
 		// --------------------------------------
 		// コンテンツを処理
-		if( array_key_exists( $action, $route ) ){
-			$controller = $route[$action];
+		$controller = $this->route($action);
+		if( $controller ){
 			$page_info['title'] = $controller->title;
 			$this->theme()->set_current_page_info( $page_info );
 
@@ -191,6 +197,45 @@ var_dump( $_REQUEST );
 			$this->notfound();
 		}
 		exit();
+	}
+
+	/**
+	 * ルーティング処理
+	 */
+	private function route( $action ){
+
+		// 静的固定ルート
+		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
+			$controller = $this->route[$action];
+			return $controller;
+		}
+
+		// 動的ルート
+		$dynamicKeys = array();
+		foreach( $this->route as $action_key => $controller ){
+			$action_key = preg_replace('/\./', '\\\\.', $action_key);
+			$action_ptn = '';
+			while(1){
+				if( !preg_match('/^(.*?)\{([a-zA-Z][a-zA-Z0-9]*)\?\}(.*)$/', $action_key, $matched) ){
+					$action_ptn .= $action_key;
+					break;
+				}
+				$action_ptn .= $matched[1];
+				array_push($dynamicKeys, $matched[2]);
+				$action_ptn .= '([^\.]*)';
+				$action_key = $matched[3];
+			}
+			if( preg_match('/^'.$action_ptn.'$/', $action, $matched) ){
+				$routeParams = array();
+				foreach( $dynamicKeys as $index => $key ){
+					$routeParams[$key] = $matched[$index + 1];
+				}
+				$controller->params = (object) $routeParams;
+				return $controller;
+			}
+		}
+
+		return null;
 	}
 
 
@@ -3524,6 +3569,16 @@ class auth{
 
 		return false;
 	}
+}
+?><?php
+
+namespace app01;
+
+class dinamicRoute {
+    static public function start(){
+        echo "dinamicRoute::start()"."\n";
+        return;
+    }
 }
 ?><?php
 namespace app01\middleware;

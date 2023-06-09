@@ -9,6 +9,10 @@
             "title": "Home",
             "page": "app/pages/index.php"
         },
+        "dynamic.{routeParam1?}.route": {
+            "title": "Dinamic route",
+            "page": "app01\\dinamicRoute::start"
+        },
         "test": {
             "title": "Test",
             "page": "app01\\test::start"

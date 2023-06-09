@@ -410,7 +410,7 @@ class auth{
 		}
 
 		$user_info = null;
-		if( is_dir($this->realpath_admin_users) && $this->rencon->fs()->ls($this->realpath_admin_users) ){
+		if( strlen($this->realpath_admin_users ?? '') && is_dir($this->realpath_admin_users) && $this->rencon->fs()->ls($this->realpath_admin_users) ){
 			if( $this->admin_user_data_exists( $user_id ) ){
 				$user_info = $this->read_admin_user_data( $user_id );
 				if( !isset($user_info->id) || $user_info->id != $user_id ){

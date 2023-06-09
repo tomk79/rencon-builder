@@ -36,6 +36,7 @@ class rencon {
 	private $app_name = '<!-- app_name -->';
 
 	private $route;
+	private $route_params;
 
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
@@ -122,9 +123,10 @@ class rencon {
 
 		// --------------------------------------
 		// コンテンツを処理
-		$controller = $this->route($action);
+		$controller = $this->routing($action);
 		if( $controller ){
 			$page_info['title'] = $controller->title;
+			$this->route_params = $controller->params ?? null;
 			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
@@ -144,7 +146,7 @@ class rencon {
 	/**
 	 * ルーティング処理
 	 */
-	private function route( $action ){
+	private function routing( $action ){
 
 		// 静的固定ルート
 		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
@@ -178,6 +180,21 @@ class rencon {
 		}
 
 		return null;
+	}
+
+
+	/**
+	 * ルーティングパラメータをすべて取得する
+	 */
+	public function get_route_params(){
+		return $this->route_params;
+	}
+
+	/**
+	 * ルーティングパラメータを取得する
+	 */
+	public function get_route_param( $key ){
+		return $this->route_params->{$key} ?? null;
 	}
 
 

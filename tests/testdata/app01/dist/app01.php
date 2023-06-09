@@ -68,6 +68,7 @@ class rencon {
 	private $app_name = 'Application Sample';
 
 	private $route;
+	private $route_params;
 
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
@@ -180,9 +181,10 @@ var_dump( $_REQUEST );
 
 		// --------------------------------------
 		// コンテンツを処理
-		$controller = $this->route($action);
+		$controller = $this->routing($action);
 		if( $controller ){
 			$page_info['title'] = $controller->title;
+			$this->route_params = $controller->params ?? null;
 			$this->theme()->set_current_page_info( $page_info );
 
 			ob_start();
@@ -202,7 +204,7 @@ var_dump( $_REQUEST );
 	/**
 	 * ルーティング処理
 	 */
-	private function route( $action ){
+	private function routing( $action ){
 
 		// 静的固定ルート
 		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
@@ -236,6 +238,21 @@ var_dump( $_REQUEST );
 		}
 
 		return null;
+	}
+
+
+	/**
+	 * ルーティングパラメータをすべて取得する
+	 */
+	public function get_route_params(){
+		return $this->route_params;
+	}
+
+	/**
+	 * ルーティングパラメータを取得する
+	 */
+	public function get_route_param( $key ){
+		return $this->route_params->{$key} ?? null;
 	}
 
 
@@ -3575,8 +3592,12 @@ class auth{
 namespace app01;
 
 class dinamicRoute {
-    static public function start(){
-        echo "dinamicRoute::start()"."\n";
+    static public function start( $rencon ){
+        echo "<p>dinamicRoute::start()</p>"."\n";
+        echo "<pre>"."\n";
+        var_dump($rencon->get_route_params());
+        var_dump($rencon->get_route_param('routeParam1'));
+        echo "</pre>"."\n";
         return;
     }
 }
@@ -3605,7 +3626,7 @@ class sample {
 namespace app01;
 
 class test {
-    static public function start(){
+    static public function start( $rencon ){
         echo "test::start()"."\n";
         return;
     }

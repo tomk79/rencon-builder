@@ -213,8 +213,8 @@ var_dump( $_REQUEST );
 		}
 
 		// 動的ルート
-		$dynamicKeys = array();
 		foreach( $this->route as $action_key => $controller ){
+			$dynamicKeys = array();
 			$action_key = preg_replace('/\./', '\\\\.', $action_key);
 			$action_ptn = '';
 			while(1){

@@ -1999,7 +1999,8 @@ class filesystem{
 		return $RTN;
 	}
 
-}<?php
+}
+?><?php
 /**
  * tomk79/request
  *

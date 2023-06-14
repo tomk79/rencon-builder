@@ -499,6 +499,9 @@ Deny from all
 				margin: 0;
 				padding: 0;
 			}
+			body,input,textarea,select,option,button{
+				font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif, system-ui;
+			}
 			.theme-container {
 				box-sizing: border-box;
 				text-align: center;
@@ -3125,6 +3128,9 @@ class auth{
 				font-size: 16px;
 				margin: 0;
 				padding: 0;
+			}
+			body,input,textarea,select,option,button{
+				font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif, system-ui;
 			}
 			.theme-container {
 				box-sizing: border-box;

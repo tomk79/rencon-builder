@@ -4,12 +4,14 @@ $current_page_info = $this->get_current_page_info();
 ?>
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8" />
-<title><?= htmlspecialchars( $app_info->name ) ?> | <?= htmlspecialchars( $current_page_info->title ) ?></title>
-<link rel="stylesheet" href="?res=theme.css" />
-</head>
-<body>
+    <head>
+        <meta charset="utf-8" />
+        <title><?= htmlspecialchars( $app_info->name ) ?> | <?= htmlspecialchars( $current_page_info->title ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+        <link rel="stylesheet" href="?res=theme.css" />
+    </head>
+    <body>
 
 <p><a href="?a="><?= htmlspecialchars( $app_info->name ) ?></a></p>
 
@@ -36,6 +38,6 @@ foreach( $app_info->pages as $pid=>$page_info ){
 </p>
 <?php } ?>
 
-<script src="?res=theme.js"></script>
-</body>
+        <script src="?res=theme.js"></script>
+    </body>
 </html>

@@ -112,6 +112,7 @@ class auth{
 	<head>
 		<meta charset="UTF-8" />
 		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="nofollow, noindex, noarchive" />
 		<?= $this->mk_css() ?>
 	</head>
@@ -171,6 +172,7 @@ class auth{
 	<head>
 		<meta charset="UTF-8" />
 		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="nofollow, noindex, noarchive" />
 		<?= $this->mk_css() ?>
 	</head>

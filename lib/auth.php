@@ -510,6 +510,8 @@ class auth{
 		if( !$result ){
 			return false;
 		}
+		$this->rencon->fs()->chmod_r($this->realpath_admin_users, 0700, 0700);
+
 		if( is_file($realpath_json) ){
 			unlink($realpath_json); // 素のJSONがあったら削除する
 		}

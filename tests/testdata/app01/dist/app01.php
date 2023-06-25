@@ -419,7 +419,7 @@ Deny from all
 				'email' => $this->rencon->req()->get_param('admin_user_email'),
 				'role' => 'admin',
 			);
-			$result = $this->rencon->auth()->create_admin_user( $user_info ); // TODO: auth()->create_admin_user() は存在しない。実装する。
+			$result = $this->rencon->auth()->create_admin_user( $user_info );
 			if( $result->result ){
 				header('Location:'.'?a=');
 				exit;

@@ -125,6 +125,24 @@ class rencon {
 		// コンテンツを処理
 		$controller = $this->routing($action);
 		if( $controller ){
+
+			// method を検査する
+			$allow_methods = array("get");
+			if(is_string($controller->allow_methods ?? null)){
+				$allow_methods = array(strtolower($controller->allow_methods));
+			}elseif(is_array($controller->allow_methods ?? null)){
+				$allow_methods = array();
+				foreach($controller->allow_methods as $method){
+					array_push($allow_methods, strtolower($method));
+				}
+			}
+
+			if( array_search( $this->req->get_method(), $allow_methods ) === false ){
+				$this->method_not_allowed();
+				exit();
+			}
+
+
 			$page_info['title'] = $controller->title;
 			$this->route_params = $controller->params ?? null;
 			$this->theme()->set_current_page_info( $page_info );
@@ -214,10 +232,25 @@ class rencon {
 	 * Not Found ページを表示して終了する
 	 */
 	public function notfound(){
+		header("HTTP/1.0 404 Not Found");
 		$page_info['title'] = 'Not Found';
 		$this->theme()->set_current_page_info( $page_info );
 
 		$content = '<p>404: Not Found</p>';
+		$html = $this->theme()->bind( $content );
+		echo $html;
+		exit;
+	}
+
+	/**
+	 * Method Not Allowed ページを表示して終了する
+	 */
+	private function method_not_allowed(){
+		header("HTTP/1.0 405 Method Not Allowed");
+		$page_info['title'] = 'Method Not Allowed';
+		$this->theme()->set_current_page_info( $page_info );
+
+		$content = '<p>405: Method Not Allowed</p>';
 		$html = $this->theme()->bind( $content );
 		echo $html;
 		exit;

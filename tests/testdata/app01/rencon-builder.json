@@ -16,6 +16,11 @@
         "test": {
             "title": "Test",
             "page": "app01\\test::start"
+        },
+        "test.post": {
+            "title": "Post Test",
+            "allow_methods": "post",
+            "page": "app01\\test::post"
         }
     },
     "middleware": [

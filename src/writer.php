@@ -123,6 +123,7 @@ class writer {
 				}else{
 					$src_route .= '	"page" => '.var_export($func_name->page, true).','."\n";
 				}
+				$src_route .= '	"allow_methods" => '.var_export(($func_name->allow_methods ?? null), true).','."\n";
 				$src_route .= '),'."\n";
 
 				if( $route == 'login' ){

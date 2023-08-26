@@ -143,7 +143,7 @@ class auth{
 </table>
 <p><button type="submit">Login</button></p>
 <input type="hidden" name="ADMIN_USER_FLG" value="1" />
-<input type="hidden" name="ADMIN_USER_CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
+<input type="hidden" name="CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
 			</form>
 		</div>
@@ -552,14 +552,14 @@ class auth{
 	 * CSRFトークンを取得する
 	 */
 	public function get_csrf_token(){
-		$ADMIN_USER_CSRF_TOKEN = $this->rencon->req()->get_session('ADMIN_USER_CSRF_TOKEN');
-		if( !is_array($ADMIN_USER_CSRF_TOKEN) ){
-			$ADMIN_USER_CSRF_TOKEN = array();
+		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		if( !is_array($CSRF_TOKEN) ){
+			$CSRF_TOKEN = array();
 		}
-		if( !count($ADMIN_USER_CSRF_TOKEN) ){
+		if( !count($CSRF_TOKEN) ){
 			return $this->create_csrf_token();
 		}
-		foreach( $ADMIN_USER_CSRF_TOKEN as $token ){
+		foreach( $CSRF_TOKEN as $token ){
 			if( $token['created_at'] < time() - ($this->csrf_token_expire / 2) ){
 				continue; // 有効期限が切れていたら評価できない
 			}
@@ -572,19 +572,19 @@ class auth{
 	 * 新しいCSRFトークンを発行する
 	 */
 	private function create_csrf_token(){
-		$ADMIN_USER_CSRF_TOKEN = $this->rencon->req()->get_session('ADMIN_USER_CSRF_TOKEN');
-		if( !is_array($ADMIN_USER_CSRF_TOKEN) ){
-			$ADMIN_USER_CSRF_TOKEN = array();
+		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		if( !is_array($CSRF_TOKEN) ){
+			$CSRF_TOKEN = array();
 		}
 
 		$id = $this->rencon->req()->get_param('ADMIN_USER_ID');
 		$rand = uniqid('clover'.$id, true);
 		$hash = md5( $rand );
-		array_push($ADMIN_USER_CSRF_TOKEN, array(
+		array_push($CSRF_TOKEN, array(
 			'hash' => $hash,
 			'created_at' => time(),
 		));
-		$this->rencon->req()->set_session('ADMIN_USER_CSRF_TOKEN', $ADMIN_USER_CSRF_TOKEN);
+		$this->rencon->req()->set_session('CSRF_TOKEN', $CSRF_TOKEN);
 		return $hash;
 	}
 
@@ -604,7 +604,7 @@ class auth{
 	 */
 	public function is_valid_csrf_token_given(){
 
-		$csrf_token = $this->rencon->req()->get_param('ADMIN_USER_CSRF_TOKEN');
+		$csrf_token = $this->rencon->req()->get_param('CSRF_TOKEN');
 		if( !$csrf_token ){
 			$headers = getallheaders();
 			foreach($headers as $header_name=>$header_val){
@@ -618,11 +618,11 @@ class auth{
 			return false;
 		}
 
-		$ADMIN_USER_CSRF_TOKEN = $this->rencon->req()->get_session('ADMIN_USER_CSRF_TOKEN');
-		if( !is_array($ADMIN_USER_CSRF_TOKEN) ){
-			$ADMIN_USER_CSRF_TOKEN = array();
+		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		if( !is_array($CSRF_TOKEN) ){
+			$CSRF_TOKEN = array();
 		}
-		foreach( $ADMIN_USER_CSRF_TOKEN as $token ){
+		foreach( $CSRF_TOKEN as $token ){
 			if( $token['created_at'] < time() - $this->csrf_token_expire ){
 				continue; // 有効期限が切れていたら評価できない
 			}

@@ -1,8 +1,13 @@
 # rencon-builder
 
-A one filed PHP framework.
+A single file PHP framework.
 
 ## 更新履歴 - Change Log
+
+### tomk79/rencon-builder v0.2.0 (リリース日未定)
+
+- ルーティング設定に `allow_methods` を追加した。
+- パラメータ名 `ADMIN_USER_CSRF_TOKEN` を `CSRF_TOKEN` に変更した。
 
 ### tomk79/rencon-builder v0.1.0 (2023年8月26日)
 

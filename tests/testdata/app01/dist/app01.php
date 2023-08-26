@@ -64,6 +64,13 @@ class rencon {
 	private $theme;
 	private $resources;
 
+	/**
+	 * 動的に追加されたプロパティ
+	 *
+	 * @access private
+	 */
+	private $custom_dynamic_property = array();
+
 	private $app_id = 'app01';
 	private $app_name = 'Application Sample';
 
@@ -76,6 +83,25 @@ class rencon {
 		$this->conf = new conf($this, $conf);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
+	}
+
+	/**
+	 * 動的なプロパティを登録する
+	 */
+	public function __set( $name, $property ){
+		if( isset($this->custom_dynamic_property[$name]) ){
+			trigger_error('$px->'.$name.' is already registered.');
+			return;
+		}
+		$this->custom_dynamic_property[$name] = $property;
+		return;
+	}
+
+	/**
+	 * 動的に追加されたプロパティを取り出す
+	 */
+	public function __get( $name ){
+		return $this->custom_dynamic_property[$name] ?? null;
 	}
 
 	public function conf(){ return $this->conf; }
@@ -311,7 +337,7 @@ var_dump( $_REQUEST );
 	/**
 	 * Method Not Allowed ページを表示して終了する
 	 */
-	private function method_not_allowed(){
+	public function method_not_allowed(){
 		header("HTTP/1.0 405 Method Not Allowed");
 		$page_info['title'] = 'Method Not Allowed';
 		$this->theme()->set_current_page_info( $page_info );

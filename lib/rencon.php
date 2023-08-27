@@ -92,7 +92,9 @@ class rencon {
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";
 			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
-				mkdir($realpath_private_data_dir.'/logs/');
+				if( !file_exists($realpath_private_data_dir.'/logs/') ){
+					mkdir($realpath_private_data_dir.'/logs/');
+				}
 				error_log(
 					$datestr." - Uncaught exception: ".$exception->getMessage().' on '.$exception->getFile().' line:'.$exception->getLine()."\n",
 					3,
@@ -106,7 +108,9 @@ class rencon {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
-				mkdir($realpath_private_data_dir.'/logs/');
+				if( !file_exists($realpath_private_data_dir.'/logs/') ){
+					mkdir($realpath_private_data_dir.'/logs/');
+				}
 				error_log(
 					$datestr.' - Error['.$errno.']: '.$errstr.' on '.$errfile.' line:'.$errline."\n",
 					3,

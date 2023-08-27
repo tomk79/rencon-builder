@@ -87,7 +87,7 @@ class rencon {
 		header('Content-type: text/html'); // default
 
 		// 例外ハンドラを設定する
-		set_exception_handler(function(Throwable $exception) {
+		set_exception_handler(function(\Throwable $exception) {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";

@@ -27,21 +27,21 @@ class conf {
 		// --------------------------------------
 		// $conf->users
 		$this->users = null;
-		if( property_exists( $conf, 'users' ) && !is_null( $conf->users ) ){
+		if( !is_null( $conf->users ?? null ) ){
 			$this->users = (array) $conf->users;
 		}
 
 		// --------------------------------------
 		// $conf->realpath_private_data_dir
 		$this->realpath_private_data_dir = null;
-		if( property_exists( $conf, 'realpath_private_data_dir' ) && is_string( $conf->realpath_private_data_dir ) ){
+		if( is_string( $conf->realpath_private_data_dir ?? null ) ){
 			$this->realpath_private_data_dir = $this->rencon->fs()->get_realpath($conf->realpath_private_data_dir);
 		}
 
 		// --------------------------------------
 		// $conf->databases
 		$this->databases = null;
-		if( property_exists( $conf, 'databases' ) && !is_null( $conf->databases ) ){
+		if( !is_null( $conf->databases ?? null ) ){
 			$this->databases = (array) $conf->databases;
 		}
 	}

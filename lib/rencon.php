@@ -58,7 +58,7 @@ class rencon {
 	 */
 	public function __set( $name, $property ){
 		if( isset($this->custom_dynamic_property[$name]) ){
-			trigger_error('$px->'.$name.' is already registered.');
+			trigger_error('$rencon->'.$name.' is already registered.');
 			return;
 		}
 		$this->custom_dynamic_property[$name] = $property;
@@ -86,13 +86,45 @@ class rencon {
 	public function run(){
 		header('Content-type: text/html'); // default
 
+		// 例外ハンドラを設定する
+		set_exception_handler(function(Throwable $exception) {
+			$datestr = date('Y-m-d H:i:s');
+			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
+			echo "Uncaught exception: ", $exception->getMessage(), "\n";
+			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+				mkdir($realpath_private_data_dir.'/logs/');
+				error_log(
+					$datestr." - Uncaught exception: ".$exception->getMessage().' on '.$exception->getFile().' line:'.$exception->getLine()."\n",
+					3,
+					$realpath_private_data_dir.'/logs/error_report.log'
+				);
+			}
+		});
+
+		// エラーハンドラを設定する
+		set_error_handler(function($errno, $errstr, $errfile, $errline) {
+			$datestr = date('Y-m-d H:i:s');
+			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
+			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+				mkdir($realpath_private_data_dir.'/logs/');
+				error_log(
+					$datestr.' - Error['.$errno.']: '.$errstr.' on '.$errfile.' line:'.$errline."\n",
+					3,
+					$realpath_private_data_dir.'/logs/error_report.log'
+				);
+			}
+
+			return false;
+		});
+
+		// routing
 		$this->route = array(
 
 /* router */
 
 		);
 
-		$action = $this->req->get_param('a') ?? null;
+		$action = $this->req->get_param('a') ?? '';
 		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
@@ -247,7 +279,7 @@ class rencon {
 	 */
 	public function realpath_private_data_dir( $localpath = null ){
 		$realpath_private_data_dir = null;
-		if( property_exists( $this->conf, 'realpath_private_data_dir' ) && is_string( $this->conf->realpath_private_data_dir ) ){
+		if( is_string( $this->conf->realpath_private_data_dir ?? null ) ){
 			$realpath_private_data_dir = $this->fs()->get_realpath($this->conf->realpath_private_data_dir.$localpath);
 		}
 		return $realpath_private_data_dir;

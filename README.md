@@ -9,7 +9,7 @@ A single file PHP framework.
 
 ## 更新履歴 - Change Log
 
-### tomk79/rencon-builder v0.2.0 (リリース日未定)
+### tomk79/rencon-builder v0.2.0 (2023年8月29日)
 
 - ルーティング設定に `allow_methods` を追加した。
 - パラメータ名 `ADMIN_USER_CSRF_TOKEN` を `CSRF_TOKEN` に変更した。

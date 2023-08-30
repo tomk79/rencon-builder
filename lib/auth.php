@@ -552,24 +552,30 @@ class auth{
 
 
 	// --------------------------------------
-	// APIトークンの認証
+	// APIキー
 
 	/**
-	 * APIトークンが有効か？
+	 * APIキーが有効か？
 	 */
-	public function is_valid_api_token( $api_token ){
-		$api_token_attribute = $this->get_api_token_attributes( $api_token );
-		if( $api_token_attribute === false ){
+	public function is_valid_api_key( $api_key ){
+		$api_key_attribute = $this->get_api_key_attributes( $api_key );
+		if( $api_key_attribute === false ){
 			return false;
 		}
 		return true;
 	}
 
 	/**
-	 * APIトークンに与えられた属性情報を取得する
+	 * APIキーに与えられた属性情報を取得する
 	 */
-	public function get_api_token_attributes( $api_token ){
-		// TODO: 実装する
+	public function get_api_key_attributes( $api_key ){
+
+		// config に定義されたAPIキーでログインを試みる
+		$api_keys = (array) $this->rencon->conf()->api_keys;
+		if( is_array($api_keys[$api_key] ?? null) || is_object($api_keys[$api_key] ?? null) ){
+			return (object) $api_keys[$api_key];
+		}
+
 		return false;
 	}
 

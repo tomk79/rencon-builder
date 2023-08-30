@@ -18,11 +18,20 @@ class test {
         return;
     }
     static public function api_preview($rencon){
-        // TODO: PHPビルトインサーバーでは受け取れない。AJAXでpostの通信もプレビューするように書き換える。
         ?>
-        <p>開発中</p>
-        <p><a href="/app01.php?api=api.test.test001" target="_blank">http://localhost:8088/app01.php?api=api.test.test001</a></p>
-        <p><a href="/app01.php?api=api.test.aaaaaa" target="_blank">http://localhost:8088/app01.php?api=api.test.aaaaaa</a></p>
+        <script>
+        function sendApiRequest(apiName){
+            fetch('?api='+apiName, {
+                method: 'post',
+                headers: {
+                    'X-API-KEY': 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx',
+                }
+            });
+            return;
+        }
+        </script>
+        <p><button type="button" onclick="sendApiRequest('api.test.test001');">api.test.test001</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa');">api.test.aaaaaa</button></p>
         <?php
         return;
     }

@@ -15,6 +15,12 @@ $conf = new \stdClass();
 
 
 /* --------------------------------------
+ * 非公開データディレクトリのパス
+ */
+$conf->realpath_private_data_dir = __DIR__.'/'.basename(__FILE__, '.php').'__data/';
+
+
+/* --------------------------------------
  * ログインユーザーのIDとパスワードの対
  * 
  * rencon の初期画面は、ログイン画面から始まります。
@@ -31,10 +37,21 @@ $conf->users = array(
 	),
 );
 
+
 /* --------------------------------------
- * 非公開データディレクトリのパス
+ * APIキー
  */
-$conf->realpath_private_data_dir = __DIR__.'/'.basename(__FILE__, '.php').'__data/';
+$conf->api_keys = array(
+	"xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx" => array(
+		"created_by" => "admin", // 作成したユーザーのID
+		"permissions" => array( // このAPIキーで許可された項目
+			"foo1",
+			"foo2",
+			"bar1",
+		),
+	),
+);
+
 
 /* --------------------------------------
  * DB接続情報
@@ -202,12 +219,12 @@ var_dump( $_REQUEST );
 'api.test.test001' => (object) array(
 	"title" => NULL,
 	"page" => 'app01\\api_test::test001',
-	"allow_methods" => NULL,
+	"allow_methods" => 'post',
 ),
 'api.test.{routeParam1?}' => (object) array(
 	"title" => NULL,
 	"page" => 'app01\\api_test::test_route_param',
-	"allow_methods" => NULL,
+	"allow_methods" => 'post',
 ),
 
 		);
@@ -281,7 +298,7 @@ var_dump( $_REQUEST );
 				}
 			}
 
-			if( !$this->auth()->is_valid_api_token( $request_api_key ) ){
+			if( !$this->auth()->is_valid_api_key( $request_api_key ) ){
 				$this->forbidden();
 				exit;
 			}
@@ -3665,24 +3682,30 @@ class auth{
 
 
 	// --------------------------------------
-	// APIトークンの認証
+	// APIキー
 
 	/**
-	 * APIトークンが有効か？
+	 * APIキーが有効か？
 	 */
-	public function is_valid_api_token( $api_token ){
-		$api_token_attribute = $this->get_api_token_attributes( $api_token );
-		if( $api_token_attribute === false ){
+	public function is_valid_api_key( $api_key ){
+		$api_key_attribute = $this->get_api_key_attributes( $api_key );
+		if( $api_key_attribute === false ){
 			return false;
 		}
 		return true;
 	}
 
 	/**
-	 * APIトークンに与えられた属性情報を取得する
+	 * APIキーに与えられた属性情報を取得する
 	 */
-	public function get_api_token_attributes( $api_token ){
-		// TODO: 実装する
+	public function get_api_key_attributes( $api_key ){
+
+		// config に定義されたAPIキーでログインを試みる
+		$api_keys = (array) $this->rencon->conf()->api_keys;
+		if( is_array($api_keys[$api_key] ?? null) || is_object($api_keys[$api_key] ?? null) ){
+			return (object) $api_keys[$api_key];
+		}
+
 		return false;
 	}
 
@@ -3848,11 +3871,20 @@ class test {
         return;
     }
     static public function api_preview($rencon){
-        // TODO: PHPビルトインサーバーでは受け取れない。AJAXでpostの通信もプレビューするように書き換える。
         ?>
-        <p>開発中</p>
-        <p><a href="/app01.php?api=api.test.test001" target="_blank">http://localhost:8088/app01.php?api=api.test.test001</a></p>
-        <p><a href="/app01.php?api=api.test.aaaaaa" target="_blank">http://localhost:8088/app01.php?api=api.test.aaaaaa</a></p>
+        <script>
+        function sendApiRequest(apiName){
+            fetch('?api='+apiName, {
+                method: 'post',
+                headers: {
+                    'X-API-KEY': 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx',
+                }
+            });
+            return;
+        }
+        </script>
+        <p><button type="button" onclick="sendApiRequest('api.test.test001');">api.test.test001</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa');">api.test.aaaaaa</button></p>
         <?php
         return;
     }

@@ -32,9 +32,11 @@
     },
     "api_route": {
         "api.test.test001": {
+            "allow_methods": "post",
             "page": "app01\\api_test::test001"
         },
         "api.test.{routeParam1?}": {
+            "allow_methods": "post",
             "page": "app01\\api_test::test_route_param"
         }
     },

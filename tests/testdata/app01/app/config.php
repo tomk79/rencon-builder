@@ -4,6 +4,12 @@ $conf = new \stdClass();
 
 
 /* --------------------------------------
+ * 非公開データディレクトリのパス
+ */
+$conf->realpath_private_data_dir = __DIR__.'/'.basename(__FILE__, '.php').'__data/';
+
+
+/* --------------------------------------
  * ログインユーザーのIDとパスワードの対
  * 
  * rencon の初期画面は、ログイン画面から始まります。
@@ -20,10 +26,21 @@ $conf->users = array(
 	),
 );
 
+
 /* --------------------------------------
- * 非公開データディレクトリのパス
+ * APIキー
  */
-$conf->realpath_private_data_dir = __DIR__.'/'.basename(__FILE__, '.php').'__data/';
+$conf->api_keys = array(
+	"xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx" => array(
+		"created_by" => "admin", // 作成したユーザーのID
+		"permissions" => array( // このAPIキーで許可された項目
+			"foo1",
+			"foo2",
+			"bar1",
+		),
+	),
+);
+
 
 /* --------------------------------------
  * DB接続情報

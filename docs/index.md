@@ -36,6 +36,26 @@ $conf->users = array(
 );
 ```
 
+### $conf->api_keys
+
+APIキーを定義します。
+
+```php
+/* --------------------------------------
+ * APIキー
+ */
+$conf->api_keys = array(
+	"xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx" => array(
+		"created_by" => "admin", // 作成したユーザーのID
+		"permissions" => array( // このAPIキーで許可された項目
+			"foo1",
+			"foo2",
+			"bar1",
+		),
+	),
+);
+```
+
 ### $conf->databases
 
 データベースへの接続情報を定義します。

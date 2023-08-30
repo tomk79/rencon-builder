@@ -200,7 +200,7 @@ class rencon {
 				}
 			}
 
-			if( !$this->auth()->is_valid_api_token( $request_api_key ) ){
+			if( !$this->auth()->is_valid_api_key( $request_api_key ) ){
 				$this->forbidden();
 				exit;
 			}

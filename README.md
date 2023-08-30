@@ -9,6 +9,10 @@ A single file PHP framework.
 
 ## 更新履歴 - Change Log
 
+### tomk79/rencon-builder v0.2.1 (リリース日未定)
+
+- APIのルーティング機能と、APIキーの管理機能を追加した。
+
 ### tomk79/rencon-builder v0.2.0 (2023年8月29日)
 
 - ルーティング設定に `allow_methods` を追加した。

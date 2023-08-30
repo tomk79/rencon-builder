@@ -109,61 +109,70 @@ class writer {
 		}
 
 
-		$src_route = '';
+		$src_route = (object) array(
+			'route' => '',
+			'api_route' => '',
+		);
 		$src_route_login = '';
 		$src_route_logout = '';
-		if( $this->renconBuilderJson->route ){
-			foreach( $this->renconBuilderJson->route as $route => $func_name ){
-				$src_route .= ''.var_export($route, true).' => (object) array('."\n";
-				$src_route .= '	"title" => '.var_export($func_name->title, true).','."\n";
-				if( is_file( $func_name->page ) ){
-					$src_route .= '	"page" => function( $rencon ){ ?'.'>'."\n";
-					$src_route .= file_get_contents( $func_name->page );
-					$src_route .= '<'.'?php return; },'."\n";
-				}else{
-					$src_route .= '	"page" => '.var_export($func_name->page, true).','."\n";
-				}
-				$src_route .= '	"allow_methods" => '.var_export(($func_name->allow_methods ?? null), true).','."\n";
-				$src_route .= '),'."\n";
+		foreach( array('route', 'api_route') as $router_division ){
+			if( $this->renconBuilderJson->{$router_division} ){
+				foreach( $this->renconBuilderJson->{$router_division} as $route => $func_name ){
+					$src_route->{$router_division} .= ''.var_export($route, true).' => (object) array('."\n";
+					$src_route->{$router_division} .= '	"title" => '.var_export($func_name->title, true).','."\n";
+					if( is_file( $func_name->page ) ){
+						$src_route->{$router_division} .= '	"page" => function( $rencon ){ ?'.'>'."\n";
+						$src_route->{$router_division} .= file_get_contents( $func_name->page );
+						$src_route->{$router_division} .= '<'.'?php return; },'."\n";
+					}else{
+						$src_route->{$router_division} .= '	"page" => '.var_export($func_name->page, true).','."\n";
+					}
+					$src_route->{$router_division} .= '	"allow_methods" => '.var_export(($func_name->allow_methods ?? null), true).','."\n";
+					$src_route->{$router_division} .= '),'."\n";
 
-				if( $route == 'login' ){
-					if( is_file( $func_name->page ) ){
-						$src_route_login .= '$page = function(){'."\n";
-						$src_route_login .= '$rencon = $this; ?'.'>'."\n";
-						$src_route_login .= file_get_contents( $func_name->page );
-						$src_route_login .= '<'.'?php return; }'."\n";
-					}else{
-						$src_route_login .= '$page = '.var_export($func_name->page, true).';'."\n";
+					if( $router_division != 'route' ){
+						continue;
 					}
-					$src_route_login .= '$controller = $route[$action];'."\n";
-					$src_route_login .= '$page_info[\'title\'] = $controller->title;'."\n";
-					$src_route_login .= '$this->theme()->set_current_page_info( $page_info );'."\n";
-					$src_route_login .= 'ob_start();'."\n";
-					$src_route_login .= 'call_user_func( $controller->page );'."\n";
-					$src_route_login .= '$content = ob_get_clean();'."\n";
-					$src_route_login .= '$html = $this->theme()->bind( $content );'."\n";
-					$src_route_login .= 'echo $html;'."\n";
-				}
-				if( $route == 'logout' ){
-					if( is_file( $func_name->page ) ){
-						$src_route_logout .= '$page = function(){'."\n";
-						$src_route_logout .= '$rencon = $this; ?'.'>'."\n";
-						$src_route_logout .= file_get_contents( $func_name->page );
-						$src_route_logout .= '<'.'?php return; }'."\n";
-					}else{
-						$src_route_logout .= '$page = '.var_export($func_name->page, true).';'."\n";
+
+					if( $route == 'login' ){
+						if( is_file( $func_name->page ) ){
+							$src_route_login .= '$page = function(){'."\n";
+							$src_route_login .= '$rencon = $this; ?'.'>'."\n";
+							$src_route_login .= file_get_contents( $func_name->page );
+							$src_route_login .= '<'.'?php return; }'."\n";
+						}else{
+							$src_route_login .= '$page = '.var_export($func_name->page, true).';'."\n";
+						}
+						$src_route_login .= '$controller = $route[$action];'."\n";
+						$src_route_login .= '$page_info[\'title\'] = $controller->title;'."\n";
+						$src_route_login .= '$this->theme()->set_current_page_info( $page_info );'."\n";
+						$src_route_login .= 'ob_start();'."\n";
+						$src_route_login .= 'call_user_func( $controller->page );'."\n";
+						$src_route_login .= '$content = ob_get_clean();'."\n";
+						$src_route_login .= '$html = $this->theme()->bind( $content );'."\n";
+						$src_route_login .= 'echo $html;'."\n";
 					}
-					$src_route_logout .= '$controller = $route[$action];'."\n";
-					$src_route_logout .= '$page_info[\'title\'] = $controller->title;'."\n";
-					$src_route_logout .= '$this->theme()->set_current_page_info( $page_info );'."\n";
-					$src_route_logout .= 'ob_start();'."\n";
-					$src_route_logout .= 'call_user_func( $controller->page );'."\n";
-					$src_route_logout .= '$content = ob_get_clean();'."\n";
-					$src_route_logout .= '$html = $this->theme()->bind( $content );'."\n";
-					$src_route_logout .= 'echo $html;'."\n";
+					if( $route == 'logout' ){
+						if( is_file( $func_name->page ) ){
+							$src_route_logout .= '$page = function(){'."\n";
+							$src_route_logout .= '$rencon = $this; ?'.'>'."\n";
+							$src_route_logout .= file_get_contents( $func_name->page );
+							$src_route_logout .= '<'.'?php return; }'."\n";
+						}else{
+							$src_route_logout .= '$page = '.var_export($func_name->page, true).';'."\n";
+						}
+						$src_route_logout .= '$controller = $route[$action];'."\n";
+						$src_route_logout .= '$page_info[\'title\'] = $controller->title;'."\n";
+						$src_route_logout .= '$this->theme()->set_current_page_info( $page_info );'."\n";
+						$src_route_logout .= 'ob_start();'."\n";
+						$src_route_logout .= 'call_user_func( $controller->page );'."\n";
+						$src_route_logout .= '$content = ob_get_clean();'."\n";
+						$src_route_logout .= '$html = $this->theme()->bind( $content );'."\n";
+						$src_route_logout .= 'echo $html;'."\n";
+					}
 				}
+
 			}
-
 		}
 
 		$src_config_template = '';
@@ -195,7 +204,8 @@ class writer {
 		$framework = str_replace('<!-- app_id -->', $this->app_id, $framework);
 		$framework = str_replace('<!-- version -->', $this->version, $framework);
 		$framework = str_replace('/*-- config --*/', $src_config_template, $framework);
-		$framework = str_replace('/* router */', $src_route, $framework);
+		$framework = str_replace('/* router:route */', $src_route->route, $framework);
+		$framework = str_replace('/* router:api */', $src_route->api_route, $framework);
 		$framework = str_replace('array(/* middleware */)', $src_middleware, $framework);
 		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;
@@ -218,8 +228,8 @@ class writer {
 		$src_login = $framework_files->get('auth');
 		$src_login = str_replace('<!-- app_name -->', $this->app_name, $src_login);
 		$src_login = str_replace('<!-- app_id -->', $this->app_id, $src_login);
-		$src_login = str_replace('/* route:login */', $src_route_login, $src_login);
-		$src_login = str_replace('/* route:logout */', $src_route_logout, $src_login);
+		$src_login = str_replace('/* router:login */', $src_route_login, $src_login);
+		$src_login = str_replace('/* router:logout */', $src_route_logout, $src_login);
 		$rtn .= $src_login;
 		unset($src_login);
 

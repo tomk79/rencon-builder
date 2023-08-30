@@ -4,6 +4,9 @@
     "version": "1.0.0-alpha.1",
     "dist": "dist/app01.php",
     "resources": "resources/",
+    "middleware": [
+        "app01\\middleware\\sample::middleware"
+    ],
     "route": {
         "": {
             "title": "Home",
@@ -12,6 +15,10 @@
         "dynamic.{routeParam1?}.route": {
             "title": "Dinamic route",
             "page": "app01\\dinamicRoute::start"
+        },
+        "api_preview": {
+            "title": "API Preview",
+            "page": "app01\\test::api_preview"
         },
         "test": {
             "title": "Test",
@@ -23,9 +30,14 @@
             "page": "app01\\test::post"
         }
     },
-    "middleware": [
-        "app01\\middleware\\sample::middleware"
-    ],
+    "api_route": {
+        "api.test.test001": {
+            "page": "app01\\api_test::test001"
+        },
+        "api.test.{routeParam1?}": {
+            "page": "app01\\api_test::test_route_param"
+        }
+    },
     "theme": "app/theme/theme.php",
     "config_template": "app/config.php"
 }

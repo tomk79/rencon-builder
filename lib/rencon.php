@@ -43,6 +43,7 @@ class rencon {
 	private $app_name = '<!-- app_name -->';
 
 	private $route;
+	private $api_route;
 	private $route_params;
 
 	public function __construct( $conf ){
@@ -123,12 +124,17 @@ class rencon {
 
 		// routing
 		$this->route = array(
-
-/* router */
-
+/* router:route */
 		);
 
+		$this->api_route = array(
+/* router:api */
+		);
+
+		$middleware = array(/* middleware */);
+
 		$action = $this->req->get_param('a') ?? '';
+		$api_action = $this->req->get_param('api') ?? '';
 		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
@@ -172,9 +178,6 @@ class rencon {
 
 		// --------------------------------------
 		// middleware
-
-		$middleware = array(/* middleware */);
-
 		foreach( $middleware as $method ){
 			list( $className, $funcName ) = explode('::', $method);
 			$tmp_obj = new $className();
@@ -185,7 +188,10 @@ class rencon {
 
 		// --------------------------------------
 		// コンテンツを処理
-		$controller = $this->routing($action);
+		$controller = $this->routing( $action, $this->route );
+		if( !strlen($action ?? '') && strlen($api_action ?? '') ){
+			$controller = $this->routing( $api_action, $this->api_route );
+		}
 		if( $controller ){
 
 			// method を検査する
@@ -226,16 +232,17 @@ class rencon {
 	/**
 	 * ルーティング処理
 	 */
-	private function routing( $action ){
+	private function routing( $action, $route ){
+		$action = (string) $action;
 
 		// 静的固定ルート
-		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
-			$controller = $this->route[$action];
+		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $route ) ){
+			$controller = $route[$action];
 			return $controller;
 		}
 
 		// 動的ルート
-		foreach( $this->route as $action_key => $controller ){
+		foreach( $route as $action_key => $controller ){
 			$dynamicKeys = array();
 			$action_key = preg_replace('/\./', '\\\\.', $action_key);
 			$action_ptn = '';

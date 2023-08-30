@@ -103,7 +103,7 @@ class auth{
 	public function login_page( $error_message = null ){
 		header('Content-type: text/html');
 
-/* route:login */
+/* router:login */
 
 		ob_start();
 		?>
@@ -162,7 +162,7 @@ class auth{
 		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
 		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
 
-/* route:logout */
+/* router:logout */
 
 		header('Content-type: text/html');
 		ob_start();

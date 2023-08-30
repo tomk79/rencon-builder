@@ -17,4 +17,8 @@ class test {
         echo "test::post()"."\n";
         return;
     }
+    static public function api_preview($rencon){
+        echo "test";
+        return;
+    }
 }

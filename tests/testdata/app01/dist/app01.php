@@ -75,6 +75,7 @@ class rencon {
 	private $app_name = 'Application Sample';
 
 	private $route;
+	private $api_route;
 	private $route_params;
 
 	public function __construct( $conf ){
@@ -155,7 +156,6 @@ class rencon {
 
 		// routing
 		$this->route = array(
-
 '' => (object) array(
 	"title" => 'Home',
 	"page" => function( $rencon ){ ?>
@@ -178,6 +178,11 @@ var_dump( $_REQUEST );
 	"page" => 'app01\\dinamicRoute::start',
 	"allow_methods" => NULL,
 ),
+'api_preview' => (object) array(
+	"title" => 'API Preview',
+	"page" => 'app01\\test::api_preview',
+	"allow_methods" => NULL,
+),
 'test' => (object) array(
 	"title" => 'Test',
 	"page" => 'app01\\test::start',
@@ -189,10 +194,28 @@ var_dump( $_REQUEST );
 	"allow_methods" => 'post',
 ),
 
+		);
+
+		$this->api_route = array(
+'api.test.test001' => (object) array(
+	"title" => NULL,
+	"page" => 'app01\\api_test::test001',
+	"allow_methods" => NULL,
+),
+'api.test.{routeParam1?}' => (object) array(
+	"title" => NULL,
+	"page" => 'app01\\api_test::test_route_param',
+	"allow_methods" => NULL,
+),
 
 		);
 
+		$middleware = array (
+  0 => 'app01\\middleware\\sample::middleware',
+);
+
 		$action = $this->req->get_param('a') ?? '';
+		$api_action = $this->req->get_param('api') ?? '';
 		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
@@ -236,11 +259,6 @@ var_dump( $_REQUEST );
 
 		// --------------------------------------
 		// middleware
-
-		$middleware = array (
-  0 => 'app01\\middleware\\sample::middleware',
-);
-
 		foreach( $middleware as $method ){
 			list( $className, $funcName ) = explode('::', $method);
 			$tmp_obj = new $className();
@@ -251,7 +269,10 @@ var_dump( $_REQUEST );
 
 		// --------------------------------------
 		// コンテンツを処理
-		$controller = $this->routing($action);
+		$controller = $this->routing( $action, $this->route );
+		if( !strlen($action ?? '') && strlen($api_action ?? '') ){
+			$controller = $this->routing( $api_action, $this->api_route );
+		}
 		if( $controller ){
 
 			// method を検査する
@@ -292,16 +313,17 @@ var_dump( $_REQUEST );
 	/**
 	 * ルーティング処理
 	 */
-	private function routing( $action ){
+	private function routing( $action, $route ){
+		$action = (string) $action;
 
 		// 静的固定ルート
-		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $this->route ) ){
-			$controller = $this->route[$action];
+		if( !preg_match('/\{([a-zA-Z][a-zA-Z0-9]*)\?\}/', $action) && array_key_exists( $action, $route ) ){
+			$controller = $route[$action];
 			return $controller;
 		}
 
 		// 動的ルート
-		foreach( $this->route as $action_key => $controller ){
+		foreach( $route as $action_key => $controller ){
 			$dynamicKeys = array();
 			$action_key = preg_replace('/\./', '\\\\.', $action_key);
 			$action_ptn = '';
@@ -3666,6 +3688,24 @@ class auth{
 
 namespace app01;
 
+class api_test {
+	static public function test001( $rencon ){
+		$rtn = array();
+		$rtn['result'] = true;
+		$rtn['test001'] = 'test001';
+		return $rtn;
+	}
+	static public function test_route_param( $rencon ){
+		$rtn = array();
+		$rtn['result'] = true;
+		$rtn['routeParam1'] = $rencon->get_route_param('routeParam1');
+		return $rtn;
+	}
+}
+?><?php
+
+namespace app01;
+
 class dinamicRoute {
     static public function start( $rencon ){
         echo "<p>dinamicRoute::start()</p>"."\n";
@@ -3713,6 +3753,10 @@ class test {
     }
     static public function post( $rencon ){
         echo "test::post()"."\n";
+        return;
+    }
+    static public function api_preview($rencon){
+        echo "test";
         return;
     }
 }

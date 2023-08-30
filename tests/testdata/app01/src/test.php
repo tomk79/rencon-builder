@@ -18,7 +18,12 @@ class test {
         return;
     }
     static public function api_preview($rencon){
-        echo "test";
+        // TODO: PHPビルトインサーバーでは受け取れない。AJAXでpostの通信もプレビューするように書き換える。
+        ?>
+        <p>開発中</p>
+        <p><a href="/app01.php?api=api.test.test001" target="_blank">http://localhost:8088/app01.php?api=api.test.test001</a></p>
+        <p><a href="/app01.php?api=api.test.aaaaaa" target="_blank">http://localhost:8088/app01.php?api=api.test.aaaaaa</a></p>
+        <?php
         return;
     }
 }

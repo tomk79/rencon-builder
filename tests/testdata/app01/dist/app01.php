@@ -285,6 +285,7 @@ var_dump( $_REQUEST );
 		// コンテンツを処理
 		$controller = $this->routing( $action, $this->route );
 		if( $this->routing_method == 'api' ){
+			header("Content-type: text/json");
 			$controller = $this->routing( $api_action, $this->api_route );
 		}
 		if( $controller ){
@@ -305,18 +306,25 @@ var_dump( $_REQUEST );
 				exit();
 			}
 
-
-			$page_info['title'] = $controller->title;
 			$this->route_params = $controller->params ?? null;
-			$this->theme()->set_current_page_info( $page_info );
+			if( $this->routing_method == 'web' ){
+				$page_info['title'] = $controller->title ?? null;
+				$this->theme()->set_current_page_info( $page_info );
 
-			ob_start();
-			call_user_func( $controller->page, $this );
-			$content = ob_get_clean();
+				ob_start();
+				call_user_func( $controller->page, $this );
+				$content = ob_get_clean();
 
+				$html = $this->theme()->bind( $content );
+				echo $html;
 
-			$html = $this->theme()->bind( $content );
-			echo $html;
+			}elseif( $this->routing_method == 'api' ){
+				ob_start();
+				$content = call_user_func( $controller->page, $this );
+				$stdout = ob_get_clean();
+
+				echo json_encode($content);
+			}
 
 		}else{
 			$this->notfound();
@@ -397,12 +405,20 @@ var_dump( $_REQUEST );
 	 */
 	public function notfound(){
 		header("HTTP/1.0 404 Not Found");
-		$page_info['title'] = 'Not Found';
-		$this->theme()->set_current_page_info( $page_info );
+		if( $this->routing_method == 'web' ){
+			$page_info['title'] = 'Not Found';
+			$this->theme()->set_current_page_info( $page_info );
 
-		$content = '<p>404: Not Found</p>';
-		$html = $this->theme()->bind( $content );
-		echo $html;
+			$content = '<p>404: Not Found</p>';
+			$html = $this->theme()->bind( $content );
+			echo $html;
+		}elseif( $this->routing_method == 'api' ){
+			header("Content-type: text/json");
+			echo json_encode(array(
+				"result" => false,
+				"message" => 'Not Found',
+			));
+		}
 		exit;
 	}
 
@@ -411,12 +427,20 @@ var_dump( $_REQUEST );
 	 */
 	public function method_not_allowed(){
 		header("HTTP/1.0 405 Method Not Allowed");
-		$page_info['title'] = 'Method Not Allowed';
-		$this->theme()->set_current_page_info( $page_info );
+		if( $this->routing_method == 'web' ){
+			$page_info['title'] = 'Method Not Allowed';
+			$this->theme()->set_current_page_info( $page_info );
 
-		$content = '<p>405: Method Not Allowed</p>';
-		$html = $this->theme()->bind( $content );
-		echo $html;
+			$content = '<p>405: Method Not Allowed</p>';
+			$html = $this->theme()->bind( $content );
+			echo $html;
+		}elseif( $this->routing_method == 'api' ){
+			header("Content-type: text/json");
+			echo json_encode(array(
+				"result" => false,
+				"message" => 'Method Not Allowed',
+			));
+		}
 		exit;
 	}
 
@@ -424,12 +448,21 @@ var_dump( $_REQUEST );
 	 * Forbidden ページを表示して終了する
 	 */
 	public function forbidden(){
-		$page_info['title'] = 'Forbidden';
-		$this->theme()->set_current_page_info( $page_info );
+		header("HTTP/1.0 403 Forbidden");
+		if( $this->routing_method == 'web' ){
+			$page_info['title'] = 'Forbidden';
+			$this->theme()->set_current_page_info( $page_info );
 
-		$content = '<p>403: Forbidden</p>';
-		$html = $this->theme()->bind( $content );
-		echo $html;
+			$content = '<p>403: Forbidden</p>';
+			$html = $this->theme()->bind( $content );
+			echo $html;
+		}elseif( $this->routing_method == 'api' ){
+			header("Content-type: text/json");
+			echo json_encode(array(
+				"result" => false,
+				"message" => 'Forbidden',
+			));
+		}
 		exit;
 	}
 
@@ -3770,7 +3803,12 @@ class test {
         return;
     }
     static public function api_preview($rencon){
-        echo "test";
+        // TODO: PHPビルトインサーバーでは受け取れない。AJAXでpostの通信もプレビューするように書き換える。
+        ?>
+        <p>開発中</p>
+        <p><a href="/app01.php?api=api.test.test001" target="_blank">http://localhost:8088/app01.php?api=api.test.test001</a></p>
+        <p><a href="/app01.php?api=api.test.aaaaaa" target="_blank">http://localhost:8088/app01.php?api=api.test.aaaaaa</a></p>
+        <?php
         return;
     }
 }

@@ -46,6 +46,8 @@ class rencon {
 	private $api_route;
 	private $route_params;
 
+	private $routing_method = 'web';
+
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
@@ -149,9 +151,19 @@ class rencon {
 		$this->theme = new theme( $this, $app_info, $page_info );
 		$this->auth = new auth( $this, $app_info );
 
+
+		// --------------------------------------
+		// ルーティングの方法を決める
+		$this->routing_method = 'web';
+		if( strlen($resource ?? '') ){
+			$this->routing_method = 'resource';
+		}elseif( !strlen($action ?? '') && strlen($api_action ?? '') ){
+			$this->routing_method = 'api';
+		}
+
 		// --------------------------------------
 		// リソースへのリクエストを処理
-		if( strlen($resource ?? '') ){
+		if( $this->routing_method == 'resource' ){
 			$this->resources->echo_resource( $resource );
 			exit();
 
@@ -164,17 +176,20 @@ class rencon {
 
 
 		// --------------------------------------
-		// ログイン処理
-		if( $action == 'logout' ){
-			$this->auth()->logout();
-			exit;
+		// 認証処理
+		if( $this->routing_method == 'web' ){
+			if( $action == 'logout' ){
+				$this->auth()->logout();
+				exit;
+			}
+
+			$this->auth()->auth();
+
+			if( $action == 'logout' || $action == 'login' ){
+				$this->req()->set_param('a', '');
+			}
 		}
 
-		$this->auth()->auth();
-
-		if( $action == 'logout' || $action == 'login' ){
-			$this->req()->set_param('a', null);
-		}
 
 		// --------------------------------------
 		// middleware
@@ -185,11 +200,10 @@ class rencon {
 		}
 
 
-
 		// --------------------------------------
 		// コンテンツを処理
 		$controller = $this->routing( $action, $this->route );
-		if( !strlen($action ?? '') && strlen($api_action ?? '') ){
+		if( $this->routing_method == 'api' ){
 			$controller = $this->routing( $api_action, $this->api_route );
 		}
 		if( $controller ){

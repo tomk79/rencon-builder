@@ -269,6 +269,22 @@ var_dump( $_REQUEST );
 			if( $action == 'logout' || $action == 'login' ){
 				$this->req()->set_param('a', '');
 			}
+
+		}elseif( $this->routing_method == 'api' ){
+			$request_header = $this->req()->get_headers();
+			$request_api_key = null;
+			foreach($request_header as $key=>$val){
+				$key = strtolower($key);
+				if( $key == 'x-api-key' ){
+					$request_api_key = $val;
+					break;
+				}
+			}
+
+			if( !$this->auth()->is_valid_api_token( $request_api_key ) ){
+				$this->forbidden();
+				exit;
+			}
 		}
 
 
@@ -3444,6 +3460,10 @@ class auth{
 		return true;
 	}
 
+
+	// --------------------------------------
+	// 管理ユーザーの作成画面
+
 	/**
 	 * 管理ユーザーを作成する
 	 *
@@ -3497,6 +3517,7 @@ class auth{
 			return null;
 		}
 
+		// config に定義されたユーザーでログインを試みる
 		$users = (array) $this->rencon->conf()->users;
 		if( is_string($users[$user_id] ?? null) ){
 			return (object) array(
@@ -3511,6 +3532,7 @@ class auth{
 			return (object) $users[$user_id];
 		}
 
+		// ユーザーディレクトリにセットされたユーザーで試みる
 		$user_info = null;
 		if( strlen($this->realpath_admin_users ?? '') && is_dir($this->realpath_admin_users) && $this->rencon->fs()->ls($this->realpath_admin_users) ){
 			if( $this->admin_user_data_exists( $user_id ) ){
@@ -3602,6 +3624,10 @@ class auth{
 		return password_hash($password, PASSWORD_BCRYPT);
 	}
 
+
+	// --------------------------------------
+	// 管理ユーザーデータファイルの読み書き
+
 	/**
 	 * 管理ユーザーデータファイルの書き込み
 	 */
@@ -3620,10 +3646,6 @@ class auth{
 		return $result;
 	}
 
-
-	// --------------------------------------
-	// 管理ユーザーデータファイルの読み書き
-
 	/**
 	 * 管理ユーザーデータファイルの読み込み
 	 */
@@ -3638,6 +3660,29 @@ class auth{
 			$data = json_decode(file_get_contents($realpath_json));
 			return $data;
 		}
+		return false;
+	}
+
+
+	// --------------------------------------
+	// APIトークンの認証
+
+	/**
+	 * APIトークンが有効か？
+	 */
+	public function is_valid_api_token( $api_token ){
+		$api_token_attribute = $this->get_api_token_attributes( $api_token );
+		if( $api_token_attribute === false ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * APIトークンに与えられた属性情報を取得する
+	 */
+	public function get_api_token_attributes( $api_token ){
+		// TODO: 実装する
 		return false;
 	}
 

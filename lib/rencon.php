@@ -188,6 +188,22 @@ class rencon {
 			if( $action == 'logout' || $action == 'login' ){
 				$this->req()->set_param('a', '');
 			}
+
+		}elseif( $this->routing_method == 'api' ){
+			$request_header = $this->req()->get_headers();
+			$request_api_key = null;
+			foreach($request_header as $key=>$val){
+				$key = strtolower($key);
+				if( $key == 'x-api-key' ){
+					$request_api_key = $val;
+					break;
+				}
+			}
+
+			if( !$this->auth()->is_valid_api_token( $request_api_key ) ){
+				$this->forbidden();
+				exit;
+			}
 		}
 
 

@@ -119,7 +119,7 @@ class writer {
 			if( $this->renconBuilderJson->{$router_division} ){
 				foreach( $this->renconBuilderJson->{$router_division} as $route => $func_name ){
 					$src_route->{$router_division} .= ''.var_export($route, true).' => (object) array('."\n";
-					$src_route->{$router_division} .= '	"title" => '.var_export($func_name->title, true).','."\n";
+					$src_route->{$router_division} .= '	"title" => '.var_export(($func_name->title ?? null), true).','."\n";
 					if( is_file( $func_name->page ) ){
 						$src_route->{$router_division} .= '	"page" => function( $rencon ){ ?'.'>'."\n";
 						$src_route->{$router_division} .= file_get_contents( $func_name->page );

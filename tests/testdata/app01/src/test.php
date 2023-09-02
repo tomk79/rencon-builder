@@ -20,18 +20,18 @@ class test {
     static public function api_preview($rencon){
         ?>
         <script>
-        function sendApiRequest(apiName){
+        function sendApiRequest(apiName, apiKey){
             fetch('?api='+apiName, {
                 method: 'post',
                 headers: {
-                    'X-API-KEY': 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx',
+                    'X-API-KEY': apiKey,
                 }
             });
             return;
         }
         </script>
-        <p><button type="button" onclick="sendApiRequest('api.test.test001');">api.test.test001</button></p>
-        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa');">api.test.aaaaaa</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.test001', 'zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz');">api.test.test001</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa', 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx');">api.test.aaaaaa</button></p>
         <?php
         return;
     }

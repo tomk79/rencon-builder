@@ -3143,6 +3143,9 @@ class auth{
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
 
+	/** APIキー定義ファイル */
+	private $realpath_api_key_json;
+
 	/** CSRFトークンの有効期限 */
 	private $csrf_token_expire = 60 * 60;
 
@@ -3158,6 +3161,9 @@ class auth{
 		if( is_string($this->realpath_admin_users ?? null) && !is_dir($this->realpath_admin_users) ){
 			$this->rencon->fs()->mkdir_r($this->realpath_admin_users);
 		}
+
+		// APIキー定義ファイル
+		$this->realpath_api_key_json = $this->rencon->realpath_private_data_dir('/api_keys.json.php');
 	}
 
 	/**
@@ -3706,6 +3712,13 @@ class auth{
 			return (object) $api_keys[$api_key];
 		}
 
+		// ユーザーディレクトリにセットされたユーザーで試みる
+		if( strlen($this->realpath_api_key_json ?? '') && is_file($this->realpath_api_key_json) ){
+			$api_keys = dataDotPhp::read_json($this->realpath_api_key_json);
+			if( is_object($api_keys->{$api_key} ?? null) ){
+				return (object) $api_keys->{$api_key};
+			}
+		}
 		return false;
 	}
 
@@ -3873,18 +3886,18 @@ class test {
     static public function api_preview($rencon){
         ?>
         <script>
-        function sendApiRequest(apiName){
+        function sendApiRequest(apiName, apiKey){
             fetch('?api='+apiName, {
                 method: 'post',
                 headers: {
-                    'X-API-KEY': 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx',
+                    'X-API-KEY': apiKey,
                 }
             });
             return;
         }
         </script>
-        <p><button type="button" onclick="sendApiRequest('api.test.test001');">api.test.test001</button></p>
-        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa');">api.test.aaaaaa</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.test001', 'zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz');">api.test.test001</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa', 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx');">api.test.aaaaaa</button></p>
         <?php
         return;
     }

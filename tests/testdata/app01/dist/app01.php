@@ -147,10 +147,17 @@ class rencon {
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}
+				if( !is_file($realpath_private_data_dir.'/logs/error_report.log.php') ){
+					error_log(
+						'<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n",
+						3,
+						$realpath_private_data_dir.'/logs/error_report.log.php'
+					);
+				}
 				error_log(
 					$datestr." - Uncaught exception: ".$exception->getMessage().' on '.$exception->getFile().' line:'.$exception->getLine()."\n",
 					3,
-					$realpath_private_data_dir.'/logs/error_report.log'
+					$realpath_private_data_dir.'/logs/error_report.log.php'
 				);
 			}
 		});
@@ -163,10 +170,17 @@ class rencon {
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}
+				if( !is_file($realpath_private_data_dir.'/logs/error_report.log.php') ){
+					error_log(
+						'<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n",
+						3,
+						$realpath_private_data_dir.'/logs/error_report.log.php'
+					);
+				}
 				error_log(
 					$datestr.' - Error['.$errno.']: '.$errstr.' on '.$errfile.' line:'.$errline."\n",
 					3,
-					$realpath_private_data_dir.'/logs/error_report.log'
+					$realpath_private_data_dir.'/logs/error_report.log.php'
 				);
 			}
 

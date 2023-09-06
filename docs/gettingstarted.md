@@ -62,6 +62,16 @@ rencon-builder は、`composer.json` の内容から、 `require`、 `autoload->
             "page": "app01\\test::post"
         }
     },
+    "api_route": {
+        "api.test.test001": {
+            "allow_methods": "post",
+            "page": "app01\\api_test::test001"
+        },
+        "api.test.{routeParam1?}": {
+            "allow_methods": "post",
+            "page": "app01\\api_test::test_route_param"
+        }
+    },
     "theme": "app/theme/theme.php",
     "config_template": "app/config.php"
 }
@@ -125,6 +135,13 @@ rencon-builder は、`composer.json` の内容から、 `require`、 `autoload->
 
 PHPファイルのパスを割り当てた場合は、そのスクリプトを先頭から実行します。
 静的なメソッド名を割り当てた場合は、そのメソッドに、引数 `$rencon` を渡して実行します。
+
+#### api_route
+
+APIのルーティングを割り当てます。
+
+`route` の定義とほぼ同じですが、 `?a=` ではなく `?api=` に割り当てられる点と、 APIキーによる認証処理が適用される点が異なります。
+
 
 #### theme
 

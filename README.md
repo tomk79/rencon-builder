@@ -2,6 +2,13 @@
 
 A single file PHP framework.
 
+## Install
+
+```bash
+composer require tomk79/rencon-builder
+```
+
+
 ## Document
 
 - [rencon-builder document](https://tomk79.github.io/rencon-builder/)

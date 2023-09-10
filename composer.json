@@ -9,6 +9,9 @@
             "email": "tomk79@gmail.com"
         }
     ],
+    "bin": [
+        "rencon-builder.phar"
+    ],
     "scripts":{
         "build": [
             "php ./build/pre-build.php",

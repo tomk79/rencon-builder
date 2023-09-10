@@ -14,17 +14,17 @@
     ],
     "scripts":{
         "build": [
-            "php ./build/pre-build.php",
-            "php ./build/box.phar compile"
+            "@php ./build/pre-build.php",
+            "box compile"
         ],
         "preview": [
             "open http://localhost:8088/app01.php"
         ],
         "start": [
-            "php -S localhost:8088 -t ./tests/testdata/app01/dist/"
+            "@php -S localhost:8088 -t ./tests/testdata/app01/dist/"
         ],
         "test": [
-            "php ./vendor/phpunit/phpunit/phpunit"
+            "@php ./vendor/phpunit/phpunit/phpunit"
         ]
     } ,
     "minimum-stability": "dev",
@@ -40,7 +40,8 @@
         "tomk79/request": "~1.1"
     },
     "require-dev": {
-        "phpunit/phpunit": "~9.5"
+        "phpunit/phpunit": "~9.5",
+        "humbug/box": "^4.3"
     },
     "autoload": {
         "psr-4": {

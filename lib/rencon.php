@@ -27,6 +27,7 @@ class rencon {
 	private $conf;
 	private $fs;
 	private $req;
+	private $logger;
 	private $user;
 	private $auth;
 	private $theme;
@@ -51,6 +52,7 @@ class rencon {
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
+		$this->logger = new logger($this);
 		$this->conf = new conf($this, $conf);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
@@ -78,6 +80,7 @@ class rencon {
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function logger(){ return $this->logger; }
 	public function auth(){ return $this->auth; }
 	public function user(){ return $this->user; }
 	public function theme(){ return $this->theme; }
@@ -94,7 +97,7 @@ class rencon {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";
-			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}
@@ -117,7 +120,7 @@ class rencon {
 		set_error_handler(function($errno, $errstr, $errfile, $errline) {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
-			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}

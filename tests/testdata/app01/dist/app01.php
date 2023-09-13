@@ -76,6 +76,7 @@ class rencon {
 	private $conf;
 	private $fs;
 	private $req;
+	private $logger;
 	private $user;
 	private $auth;
 	private $theme;
@@ -100,6 +101,7 @@ class rencon {
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
+		$this->logger = new logger($this);
 		$this->conf = new conf($this, $conf);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
@@ -127,6 +129,7 @@ class rencon {
 	public function conf(){ return $this->conf; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
+	public function logger(){ return $this->logger; }
 	public function auth(){ return $this->auth; }
 	public function user(){ return $this->user; }
 	public function theme(){ return $this->theme; }
@@ -143,7 +146,7 @@ class rencon {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";
-			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}
@@ -166,7 +169,7 @@ class rencon {
 		set_error_handler(function($errno, $errstr, $errfile, $errline) {
 			$datestr = date('Y-m-d H:i:s');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
-			if( $realpath_private_data_dir && is_dir($realpath_private_data_dir) ){
+			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
 					mkdir($realpath_private_data_dir.'/logs/');
 				}
@@ -513,389 +516,6 @@ var_dump( $_REQUEST );
 		exit;
 	}
 
-}
-?><?php
-namespace renconFramework;
-
-/**
- * data.PHP Helper
- */
-class dataDotPhp{
-
-	private static $src_header = '<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n";
-
-	/**
-	 * JSON.PHP を読み込む
-	 */
-	static public function read_json( $realpath ){
-		if( !is_file($realpath) ){
-			return false;
-		}
-		$jsonDotPhp = file_get_contents($realpath);
-		$jsonDotPhp = preg_replace('/^.*?exit\(\)\;\s*\?\>\s*/is', '', $jsonDotPhp);
-		$json = json_decode($jsonDotPhp);
-		return $json;
-	}
-
-	/**
-	 * JSON.PHP を保存する
-	 */
-	static public function write_json( $realpath, $content ){
-		$jsonString = json_encode($content, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-		$jsonDotPhp = self::$src_header.$jsonString;
-		$result = file_put_contents( $realpath, $jsonDotPhp );
-		return $result;
-	}
-
-	/**
-	 * data.PHP にデータを保存する
-	 */
-	static public function write( $realpath, $text ){
-		$result = file_put_contents( $realpath, self::$src_header.$text );
-		return $result;
-	}
-
-	/**
-	 * data.PHP にデータを追記する
-	 */
-	static public function write_a( $realpath, $text ){
-		if( !is_file($realpath) ){
-			error_log( self::$src_header, 3, $realpath );
-		}
-		error_log( $text, 3, $realpath );
-		return true;
-	}
-}
-?><?php
-namespace renconFramework;
-
-/**
- * initializer
- */
-class initializer {
-
-	/** renconオブジェクト */
-	private $rencon;
-
-	/** 管理データ定義ディレクトリ */
-	private $realpath_private_data_dir;
-
-	/**
-	 * Constructor
-	 *
-	 * @param object $rencon $renconオブジェクト
-	 */
-	public function __construct( $rencon ){
-		$this->rencon = $rencon;
-		$this->realpath_private_data_dir = $rencon->conf()->realpath_private_data_dir;
-	}
-
-
-	/**
-	 * 初期化プロセス
-	 */
-	public function initialize(){
-		if( is_string($this->realpath_private_data_dir) && strlen($this->realpath_private_data_dir) ){
-			if( !is_dir($this->realpath_private_data_dir) ){
-				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir);
-			}
-
-			if( !is_file($this->realpath_private_data_dir.'.htaccess') ){
-				ob_start(); ?>
-RewriteEngine off
-Deny from all
-<?php
-				$src_htaccess = ob_get_clean();
-				$this->rencon->fs()->save_file( $this->realpath_private_data_dir.'.htaccess', $src_htaccess );
-			}
-
-			// 管理ユーザーデータ
-			if( !is_dir($this->realpath_private_data_dir.'admin_users/') ){
-				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir.'admin_users/');
-			}
-			if( !is_dir($this->realpath_private_data_dir.'admin_users/') || !count( $this->rencon->fs()->ls($this->realpath_private_data_dir.'admin_users/') ) ){
-				$this->initialize_admin_user_page();
-				exit;
-			}
-		}
-	}
-
-	/**
-	 * 管理ユーザーデータを初期化する画面
-	 */
-	private function initialize_admin_user_page(){
-		$result = (object) array(
-			"result" => null,
-			"message" => null,
-			"errors" => (object) array(),
-		);
-		if( $this->rencon->req()->get_method() == 'post' ){
-			$user_info = array(
-				'name' => $this->rencon->req()->get_param('ADMIN_USER_NAME'),
-				'id' => $this->rencon->req()->get_param('ADMIN_USER_ID'),
-				'pw' => $this->rencon->req()->get_param('ADMIN_USER_PW'),
-				'lang' => $this->rencon->req()->get_param('ADMIN_USER_LANG'),
-				'email' => $this->rencon->req()->get_param('admin_user_email'),
-				'role' => 'admin',
-			);
-			$result = $this->rencon->auth()->create_admin_user( $user_info );
-			if( $result->result ){
-				header('Location:'.'?a=');
-				exit;
-			}
-		}
-
-		header('Content-type: text/html');
-		ob_start();
-		?>
-<!doctype html>
-<html>
-	<head>
-		<meta charset="UTF-8" />
-		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="robots" content="nofollow, noindex, noarchive" />
-		<?= $this->mk_css() ?>
-	</head>
-	<body>
-		<div class="theme-container">
-			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
-			<?php if( strlen($result->message ?? '') ){ ?>
-				<div class="alert alert-danger" role="alert">
-					<div><?= htmlspecialchars($result->message) ?></div>
-				</div>
-			<?php } ?>
-
-			<form action="?" method="post">
-<table>
-	<tr>
-		<th>Name:</th>
-		<td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" />
-			<?php if( strlen( $result->errors->name[0] ?? '' ) ){ ?>
-			<p><?= htmlspecialchars( $result->errors->name[0] ?? '' ) ?></p>
-			<?php } ?>
-		</td>
-	</tr>
-	<tr>
-		<th>ID:</th>
-		<td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" />
-			<?php if( strlen( $result->errors->id[0] ?? '' ) ){ ?>
-			<p><?= htmlspecialchars( $result->errors->id[0] ?? '' ) ?></p>
-			<?php } ?>
-		</td>
-	</tr>
-	<tr>
-		<th>Password:</th>
-		<td><input type="password" name="ADMIN_USER_PW" value="" />
-			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
-			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
-			<?php } ?>
-		</td>
-	</tr>
-</table>
-<p><button type="submit">Create User</button></p>
-<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
-			</form>
-		</div>
-	</body>
-</html>
-<?php
-		$rtn = ob_get_clean();
-		print $rtn;
-		exit;
-	}
-
-	/**
-	 * CSSを生成
-	 */
-	private function mk_css(){
-		ob_start();?>
-		<style>
-			html, body {
-				background-color: #e7e7e7;
-				color: #333;
-				font-size: 16px;
-				margin: 0;
-				padding: 0;
-			}
-			body,input,textarea,select,option,button{
-				font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif, system-ui;
-			}
-			.theme-container {
-				box-sizing: border-box;
-				text-align: center;
-				padding: 4em 20px;
-				margin: 30px auto;
-				width: calc(100% - 20px);
-				max-width: 600px;
-				background-color: #f6f6f6;
-				border: 1px solid #bbb;
-				border-radius: 5px;
-				box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-			}
-			h1 {
-				font-size: 22px;
-			}
-			table{
-				margin: 0 auto;
-				max-width: 100%;
-			}
-			th {
-				text-align: right;
-				padding: 3px;
-			}
-			td {
-				text-align: left;
-				padding: 3px;
-			}
-			input[type=text],
-			input[type=password]{
-				display: inline-block;
-				box-sizing: border-box;
-				width: 160px;
-				min-width: 50px;
-				max-width: 100%;
-				padding: .375rem .75rem;
-				font-size: 1em;
-				font-weight: normal;
-				line-height: 1.5;
-				color: #333;
-				background-color: #f6f6f6;
-				background-clip: padding-box;
-				border: 1px solid #ced4da;
-				border-radius: .25rem;
-				transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-			}
-			input[type=text]:focus,
-			input[type=password]:focus{
-				color: #333;
-				background-color: #fff;
-				border-color: #80bdff;
-				outline: 0;
-				box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
-			}
-
-			button {
-				display: inline-block;
-				border-radius: 3px;
-				background-color: #f5fbfe;
-				color: #00a0e6;
-				border: 1px solid #00a0e6;
-				box-shadow: 0 2px 0px rgba(0,0,0,0.1);
-				padding: 0.5em 2em;
-				font-size:1em;
-				font-weight: normal;
-				line-height: 1;
-				text-decoration: none;
-				text-align: center;
-				cursor: pointer;
-				box-sizing: border-box;
-				align-items: stretch;
-				transition:
-					color 0.1s,
-					background-color 0.1s,
-					transform 0.1s
-				;
-			}
-			button:focus,
-			button:hover{
-				background-color: #d9f1fb;
-			}
-			button:hover{
-				background-color: #ccecfa;
-			}
-			button:active{
-				background-color: #00a0e6;
-				color: #fff;
-			}
-
-		</style>
-
-		<?php
-		$src = ob_get_clean();
-		return $src;
-	}
-
-}
-?><?php
-namespace renconFramework;
-
-/**
- * rencon conf class
- *
- * @author Tomoya Koyanagi <tomk79@gmail.com>
- */
-class conf {
-	private $rencon;
-	private $conf;
-	private $custom_dynamic_property = array();
-	public $users;
-	public $realpath_private_data_dir;
-	public $databases;
-
-	/**
-	 * Constructor
-	 */
-	public function __construct( $rencon, $conf ){
-		$this->rencon = $rencon;
-		$this->conf = (object) $conf;
-		foreach( $this->conf as $key=>$val ){
-			$this->{$key} = $val;
-		}
-
-		// --------------------------------------
-		// $conf->users
-		$this->users = null;
-		if( !is_null( $conf->users ?? null ) ){
-			$this->users = (array) $conf->users;
-		}
-
-		// --------------------------------------
-		// $conf->realpath_private_data_dir
-		$this->realpath_private_data_dir = null;
-		if( is_string( $conf->realpath_private_data_dir ?? null ) ){
-			$this->realpath_private_data_dir = $this->rencon->fs()->get_realpath($conf->realpath_private_data_dir);
-		}
-
-		// --------------------------------------
-		// $conf->databases
-		$this->databases = null;
-		if( !is_null( $conf->databases ?? null ) ){
-			$this->databases = (array) $conf->databases;
-		}
-	}
-
-	/**
-	 * 動的なプロパティを登録する
-	 */
-	public function __set( $name, $property ){
-		if( isset($this->custom_dynamic_property[$name]) ){
-			$this->error('$conf->'.$name.' is already registered.');
-			return;
-		}
-		$this->custom_dynamic_property[$name] = $property;
-		return;
-	}
-
-	/**
-	 * 動的に追加されたプロパティを取り出す
-	 */
-	public function __get( $name ){
-		return $this->custom_dynamic_property[$name] ?? null;
-	}
-
-	/**
-	 * コンフィグ値を取得する
-	 */
-	public function get( $key = null ){
-		if( is_null( $key ) ){
-			return $this->conf;
-		}
-		if( property_exists( $this->conf, $key ) ){
-			return $this->conf->{$key};
-		}
-		return false;
-	}
 }
 ?><?php
 /**
@@ -3006,6 +2626,503 @@ class request{
 namespace renconFramework;
 
 /**
+ * data.PHP Helper
+ */
+class dataDotPhp{
+
+	private static $src_header = '<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n";
+
+	/**
+	 * JSON.PHP を読み込む
+	 */
+	static public function read_json( $realpath ){
+		if( !is_file($realpath) ){
+			return false;
+		}
+		$jsonDotPhp = file_get_contents($realpath);
+		$jsonDotPhp = preg_replace('/^.*?exit\(\)\;\s*\?\>\s*/is', '', $jsonDotPhp);
+		$json = json_decode($jsonDotPhp);
+		return $json;
+	}
+
+	/**
+	 * JSON.PHP を保存する
+	 */
+	static public function write_json( $realpath, $content ){
+		$jsonString = json_encode($content, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+		$jsonDotPhp = self::$src_header.$jsonString;
+		$result = file_put_contents( $realpath, $jsonDotPhp );
+		return $result;
+	}
+
+	/**
+	 * data.PHP にデータを保存する
+	 */
+	static public function write( $realpath, $text ){
+		$result = file_put_contents( $realpath, self::$src_header.$text );
+		return $result;
+	}
+
+	/**
+	 * data.PHP にデータを追記する
+	 */
+	static public function write_a( $realpath, $text ){
+		if( !is_file($realpath) ){
+			error_log( self::$src_header, 3, $realpath );
+		}
+		error_log( $text, 3, $realpath );
+		return true;
+	}
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * ログ管理機能
+ */
+class logger{
+
+	/** $renconオブジェクト */
+	private $rencon;
+
+	/** ログディレクトリ */
+	private $realpath_logs;
+
+	/**
+	 * Constructor
+	 *
+	 * @param object $rencon $renconオブジェクト
+	 */
+	public function __construct( $rencon ){
+		$this->rencon = $rencon;
+
+		// ログディレクトリ
+		$this->realpath_logs = $this->rencon->realpath_private_data_dir('/logs/');
+		if( strlen($this->realpath_logs ?? '') && !$this->rencon->fs()->is_dir($this->realpath_logs) ){
+			$this->rencon->fs()->mkdir_r($this->realpath_logs);
+		}
+	}
+
+
+	/**
+	 * メッセージを記録する
+	 */
+	public function log(){
+		$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+		$arg_list = func_get_args();
+	
+		$message = '';
+		if( count($arg_list) == 1 && is_string($arg_list[0]) ){
+			$message = $arg_list[0];
+		}elseif( count($arg_list) == 1 ){
+			$message = json_encode($arg_list[0]);
+		}else{
+			$message = json_encode($arg_list);
+		}
+
+		$remote_addr = null;
+		if( isset($_SERVER["REMOTE_ADDR"]) ){
+			$remote_addr = $_SERVER["REMOTE_ADDR"];
+		}
+
+		$log = array(
+			date('c'), // 時刻
+			getmypid(), // プロセスID
+			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			$message, // ログメッセージ
+			$trace[0]['file'], // 呼び出したスクリプトファイル
+			$trace[0]['line'], // 呼び出した行番号
+			$remote_addr, // IPアドレス
+		);
+
+		dataDotPhp::write_a( $this->realpath_logs.'log-'.date('Y-m-d').'.csv.php', $this->rencon->fs()->mk_csv( array($log) ) );
+		return;
+	}
+
+	/**
+	 * エラーメッセージを記録する
+	 */
+	public function error_log(){
+		$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+		$arg_list = func_get_args();
+	
+		$message = '';
+		if( count($arg_list) == 1 && is_string($arg_list[0]) ){
+			$message = $arg_list[0];
+		}elseif( count($arg_list) == 1 ){
+			$message = json_encode($arg_list[0]);
+		}else{
+			$message = json_encode($arg_list);
+		}
+
+		$remote_addr = null;
+		if( isset($_SERVER["REMOTE_ADDR"]) ){
+			$remote_addr = $_SERVER["REMOTE_ADDR"];
+		}
+
+		$log_datetime = date('c');
+		$log_date = date('Y-m-d');
+
+		$log = array(
+			$log_datetime, // 時刻
+			getmypid(), // プロセスID
+			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			$message, // ログメッセージ
+			$trace[0]['file'], // 呼び出したスクリプトファイル
+			$trace[0]['line'], // 呼び出した行番号
+			$remote_addr, // IPアドレス
+		);
+		dataDotPhp::write_a( $this->realpath_logs.'errorlog-'.$log_date.'.csv.php', $this->rencon->fs()->mk_csv( array($log) ) );
+
+		$log = array(
+			$log_datetime, // 時刻
+			getmypid(), // プロセスID
+			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			'Error: '.$message, // ログメッセージ
+			$trace[0]['file'], // 呼び出したスクリプトファイル
+			$trace[0]['line'], // 呼び出した行番号
+			$remote_addr, // IPアドレス
+		);
+		dataDotPhp::write_a( $this->realpath_logs.'log-'.$log_date.'.csv.php', $this->rencon->fs()->mk_csv( array($log) ) );
+		return;
+	}
+
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * initializer
+ */
+class initializer {
+
+	/** renconオブジェクト */
+	private $rencon;
+
+	/** 管理データ定義ディレクトリ */
+	private $realpath_private_data_dir;
+
+	/**
+	 * Constructor
+	 *
+	 * @param object $rencon $renconオブジェクト
+	 */
+	public function __construct( $rencon ){
+		$this->rencon = $rencon;
+		$this->realpath_private_data_dir = $rencon->conf()->realpath_private_data_dir;
+	}
+
+
+	/**
+	 * 初期化プロセス
+	 */
+	public function initialize(){
+		if( is_string($this->realpath_private_data_dir) && strlen($this->realpath_private_data_dir) ){
+			if( !is_dir($this->realpath_private_data_dir) ){
+				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir);
+			}
+
+			if( !is_file($this->realpath_private_data_dir.'.htaccess') ){
+				ob_start(); ?>
+RewriteEngine off
+Deny from all
+<?php
+				$src_htaccess = ob_get_clean();
+				$this->rencon->fs()->save_file( $this->realpath_private_data_dir.'.htaccess', $src_htaccess );
+			}
+
+			// 管理ユーザーデータ
+			if( !is_dir($this->realpath_private_data_dir.'admin_users/') ){
+				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir.'admin_users/');
+			}
+			if( !is_dir($this->realpath_private_data_dir.'admin_users/') || !count( $this->rencon->fs()->ls($this->realpath_private_data_dir.'admin_users/') ) ){
+				$this->initialize_admin_user_page();
+				exit;
+			}
+		}
+	}
+
+	/**
+	 * 管理ユーザーデータを初期化する画面
+	 */
+	private function initialize_admin_user_page(){
+		$result = (object) array(
+			"result" => null,
+			"message" => null,
+			"errors" => (object) array(),
+		);
+		if( $this->rencon->req()->get_method() == 'post' ){
+			$user_info = array(
+				'name' => $this->rencon->req()->get_param('ADMIN_USER_NAME'),
+				'id' => $this->rencon->req()->get_param('ADMIN_USER_ID'),
+				'pw' => $this->rencon->req()->get_param('ADMIN_USER_PW'),
+				'lang' => $this->rencon->req()->get_param('ADMIN_USER_LANG'),
+				'email' => $this->rencon->req()->get_param('admin_user_email'),
+				'role' => 'admin',
+			);
+			$result = $this->rencon->auth()->create_admin_user( $user_info );
+			if( $result->result ){
+				header('Location:'.'?a=');
+				exit;
+			}
+		}
+
+		header('Content-type: text/html');
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<?= $this->mk_css() ?>
+	</head>
+	<body>
+		<div class="theme-container">
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
+			<?php if( strlen($result->message ?? '') ){ ?>
+				<div class="alert alert-danger" role="alert">
+					<div><?= htmlspecialchars($result->message) ?></div>
+				</div>
+			<?php } ?>
+
+			<form action="?" method="post">
+<table>
+	<tr>
+		<th>Name:</th>
+		<td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" />
+			<?php if( strlen( $result->errors->name[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->name[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>ID:</th>
+		<td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" />
+			<?php if( strlen( $result->errors->id[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->id[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>Password:</th>
+		<td><input type="password" name="ADMIN_USER_PW" value="" />
+			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+</table>
+<p><button type="submit">Create User</button></p>
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
+			</form>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
+		exit;
+	}
+
+	/**
+	 * CSSを生成
+	 */
+	private function mk_css(){
+		ob_start();?>
+		<style>
+			html, body {
+				background-color: #e7e7e7;
+				color: #333;
+				font-size: 16px;
+				margin: 0;
+				padding: 0;
+			}
+			body,input,textarea,select,option,button{
+				font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif, system-ui;
+			}
+			.theme-container {
+				box-sizing: border-box;
+				text-align: center;
+				padding: 4em 20px;
+				margin: 30px auto;
+				width: calc(100% - 20px);
+				max-width: 600px;
+				background-color: #f6f6f6;
+				border: 1px solid #bbb;
+				border-radius: 5px;
+				box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+			}
+			h1 {
+				font-size: 22px;
+			}
+			table{
+				margin: 0 auto;
+				max-width: 100%;
+			}
+			th {
+				text-align: right;
+				padding: 3px;
+			}
+			td {
+				text-align: left;
+				padding: 3px;
+			}
+			input[type=text],
+			input[type=password]{
+				display: inline-block;
+				box-sizing: border-box;
+				width: 160px;
+				min-width: 50px;
+				max-width: 100%;
+				padding: .375rem .75rem;
+				font-size: 1em;
+				font-weight: normal;
+				line-height: 1.5;
+				color: #333;
+				background-color: #f6f6f6;
+				background-clip: padding-box;
+				border: 1px solid #ced4da;
+				border-radius: .25rem;
+				transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+			}
+			input[type=text]:focus,
+			input[type=password]:focus{
+				color: #333;
+				background-color: #fff;
+				border-color: #80bdff;
+				outline: 0;
+				box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
+			}
+
+			button {
+				display: inline-block;
+				border-radius: 3px;
+				background-color: #f5fbfe;
+				color: #00a0e6;
+				border: 1px solid #00a0e6;
+				box-shadow: 0 2px 0px rgba(0,0,0,0.1);
+				padding: 0.5em 2em;
+				font-size:1em;
+				font-weight: normal;
+				line-height: 1;
+				text-decoration: none;
+				text-align: center;
+				cursor: pointer;
+				box-sizing: border-box;
+				align-items: stretch;
+				transition:
+					color 0.1s,
+					background-color 0.1s,
+					transform 0.1s
+				;
+			}
+			button:focus,
+			button:hover{
+				background-color: #d9f1fb;
+			}
+			button:hover{
+				background-color: #ccecfa;
+			}
+			button:active{
+				background-color: #00a0e6;
+				color: #fff;
+			}
+
+		</style>
+
+		<?php
+		$src = ob_get_clean();
+		return $src;
+	}
+
+}
+?><?php
+namespace renconFramework;
+
+/**
+ * rencon conf class
+ *
+ * @author Tomoya Koyanagi <tomk79@gmail.com>
+ */
+class conf {
+	private $rencon;
+	private $conf;
+	private $custom_dynamic_property = array();
+	public $users;
+	public $realpath_private_data_dir;
+	public $databases;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct( $rencon, $conf ){
+		$this->rencon = $rencon;
+		$this->conf = (object) $conf;
+		foreach( $this->conf as $key=>$val ){
+			$this->{$key} = $val;
+		}
+
+		// --------------------------------------
+		// $conf->users
+		$this->users = null;
+		if( !is_null( $conf->users ?? null ) ){
+			$this->users = (array) $conf->users;
+		}
+
+		// --------------------------------------
+		// $conf->realpath_private_data_dir
+		$this->realpath_private_data_dir = null;
+		if( is_string( $conf->realpath_private_data_dir ?? null ) ){
+			$this->realpath_private_data_dir = $this->rencon->fs()->get_realpath($conf->realpath_private_data_dir);
+		}
+
+		// --------------------------------------
+		// $conf->databases
+		$this->databases = null;
+		if( !is_null( $conf->databases ?? null ) ){
+			$this->databases = (array) $conf->databases;
+		}
+	}
+
+	/**
+	 * 動的なプロパティを登録する
+	 */
+	public function __set( $name, $property ){
+		if( isset($this->custom_dynamic_property[$name]) ){
+			$this->error('$conf->'.$name.' is already registered.');
+			return;
+		}
+		$this->custom_dynamic_property[$name] = $property;
+		return;
+	}
+
+	/**
+	 * 動的に追加されたプロパティを取り出す
+	 */
+	public function __get( $name ){
+		return $this->custom_dynamic_property[$name] ?? null;
+	}
+
+	/**
+	 * コンフィグ値を取得する
+	 */
+	public function get( $key = null ){
+		if( is_null( $key ) ){
+			return $this->conf;
+		}
+		if( property_exists( $this->conf, $key ) ){
+			return $this->conf->{$key};
+		}
+		return false;
+	}
+}
+?><?php
+namespace renconFramework;
+
+/**
  * user class
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
@@ -3642,14 +3759,14 @@ class auth{
 
 			if( !strlen($login_challenger_id ?? '') ){
 				// User ID が未指定
-				// $this->clover->logger()->error_log('Failed to login. User ID is not set.');
+				$this->rencon->logger()->error_log('Failed to login. User ID is not set.');
 				$this->login_page('user_id_is_required');
 				exit;
 			}
 
 			if( !$this->validate_admin_user_id($login_challenger_id) ){
 				// 不正な形式のID
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
 				$this->login_page('invalid_user_id');
 				exit;
 			}
@@ -3657,7 +3774,7 @@ class auth{
 			if( $this->is_account_locked( $login_challenger_id ) ){
 				// アカウントがロックされている
 				$this->admin_user_login_failed( $login_challenger_id );
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
 				$this->login_page('account_locked');
 				exit;
 			}
@@ -3666,7 +3783,7 @@ class auth{
 			if( !is_object($user_info) ){
 				// 不正なユーザーデータ
 				$this->admin_user_login_failed( $login_challenger_id );
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -3703,7 +3820,7 @@ class auth{
 			}
 
 			$this->admin_user_login_failed( $login_challenger_id );
-			// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
+			$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
 			$this->login_page('failed');
 			exit;
 		}

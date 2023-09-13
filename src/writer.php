@@ -212,11 +212,12 @@ class writer {
 		unset($framework);
 
 
-		$rtn .= $framework_files->get('dataDotPhp');
-		$rtn .= $framework_files->get('initializer');
-		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('filesystem');
 		$rtn .= $framework_files->get('request');
+		$rtn .= $framework_files->get('dataDotPhp');
+		$rtn .= $framework_files->get('logger');
+		$rtn .= $framework_files->get('initializer');
+		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('user');
 
 		$langbank = $framework_files->get('langbank');

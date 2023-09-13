@@ -72,14 +72,14 @@ class auth{
 
 			if( !strlen($login_challenger_id ?? '') ){
 				// User ID が未指定
-				// $this->clover->logger()->error_log('Failed to login. User ID is not set.');
+				$this->rencon->logger()->error_log('Failed to login. User ID is not set.');
 				$this->login_page('user_id_is_required');
 				exit;
 			}
 
 			if( !$this->validate_admin_user_id($login_challenger_id) ){
 				// 不正な形式のID
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
 				$this->login_page('invalid_user_id');
 				exit;
 			}
@@ -87,7 +87,7 @@ class auth{
 			if( $this->is_account_locked( $login_challenger_id ) ){
 				// アカウントがロックされている
 				$this->admin_user_login_failed( $login_challenger_id );
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
 				$this->login_page('account_locked');
 				exit;
 			}
@@ -96,7 +96,7 @@ class auth{
 			if( !is_object($user_info) ){
 				// 不正なユーザーデータ
 				$this->admin_user_login_failed( $login_challenger_id );
-				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
+				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -133,7 +133,7 @@ class auth{
 			}
 
 			$this->admin_user_login_failed( $login_challenger_id );
-			// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
+			$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
 			$this->login_page('failed');
 			exit;
 		}

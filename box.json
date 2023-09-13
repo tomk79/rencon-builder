@@ -1,6 +1,7 @@
 {
     "directories": [
         "src",
+        "vendor",
         "vendor/tomk79/filesystem/php",
         "vendor/tomk79/request/php"
     ],

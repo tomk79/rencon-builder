@@ -418,5 +418,106 @@ class rencon {
 		exit;
 	}
 
+	// ----------------------------------------------------------------------------
+	// アプリケーションロック
+
+	/**
+	 * アプリケーションロックする。
+	 *
+	 * @param string $app_name アプリケーションロック名
+	 * @param int $expire 有効時間(秒) (省略時: 60秒)
+	 * @return bool ロック成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function lock( $app_name, $expire = 60 ){
+		$lockfilepath = $this->realpath_private_data_dir('/app_lock/'.urlencode($app_name ?? "").'.lock.php');
+		$timeout_limit = 5;
+
+		if( !$this->fs()->is_dir( dirname( $lockfilepath ) ) ){
+			$this->fs()->mkdir_r( dirname( $lockfilepath ) );
+		}
+
+		// PHPのFileStatusCacheをクリア
+		clearstatcache();
+
+		$i = 0;
+		while( $this->is_locked( $app_name, $expire ) ){
+			$i ++;
+			if( $i >= $timeout_limit ){
+				return false;
+				break;
+			}
+			sleep(1);
+
+			// PHPのFileStatusCacheをクリア
+			clearstatcache();
+		}
+		$src = '';
+		$src .= '<'.'?php header(\'HTTP/1.1 404 Not Found\'); echo(\'404 Not Found\');exit(); ?'.'>'."\n";
+		$src .= 'ProcessID='.getmypid()."\r\n";
+		$src .= @date( 'c', time() )."\r\n";
+		$RTN = $this->fs()->save_file( $lockfilepath , $src );
+		return	$RTN;
+	}
+
+	/**
+	 * アプリケーションロックされているか確認する。
+	 *
+	 * @param string $app_name アプリケーションロック名
+	 * @param int $expire 有効時間(秒) (省略時: 60秒)
+	 * @return bool ロック中の場合に `true`、それ以外の場合に `false` を返します。
+	 */
+	public function is_locked( $app_name, $expire = 60 ){
+		$lockfilepath = $this->realpath_private_data_dir('/app_lock/'.urlencode($app_name ?? "").'.lock.php');
+		$lockfile_expire = $expire;
+
+		// PHPのFileStatusCacheをクリア
+		clearstatcache();
+
+		if( $this->fs()->is_file($lockfilepath) ){
+			if( ( time() - filemtime($lockfilepath) ) > $lockfile_expire ){
+				// 有効期限を過ぎていたら、ロックは成立する。
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * アプリケーションロックを解除する。
+	 *
+	 * @param string $app_name アプリケーションロック名
+	 * @return bool ロック解除成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function unlock( $app_name ){
+		$lockfilepath = $this->realpath_private_data_dir('/app_lock/'.urlencode($app_name ?? "").'.lock.php');
+
+		// PHPのFileStatusCacheをクリア
+		clearstatcache();
+		if( !$this->fs()->is_file( $lockfilepath ) ){
+			return true;
+		}
+
+		return unlink( $lockfilepath );
+	}
+
+	/**
+	 * アプリケーションロックファイルの更新日を更新する。
+	 *
+	 * @param string $app_name アプリケーションロック名
+	 * @return bool 成功時に `true`、失敗時に `false` を返します。
+	 */
+	public function touch_lockfile( $app_name ){
+		$lockfilepath = $this->realpath_private_data_dir('/app_lock/'.urlencode($app_name ?? "").'.lock.php');
+
+		// PHPのFileStatusCacheをクリア
+		clearstatcache();
+		if( !$this->fs()->is_file( $lockfilepath ) ){
+			return false;
+		}
+
+		return touch( $lockfilepath );
+	}
+
 }
 ?>

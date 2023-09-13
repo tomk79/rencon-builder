@@ -9,6 +9,7 @@ namespace renconFramework;
 class auth{
 	private $rencon;
 	private $app_info;
+	private $lb;
 
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
@@ -25,6 +26,7 @@ class auth{
 	public function __construct( $rencon, $app_info ){
 		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
+		$this->lb = new LangBank();
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
@@ -44,6 +46,11 @@ class auth{
 		if( !$this->is_login_required() ){
 			// ユーザーが設定されていなければ、ログインの評価を行わない。
 			return;
+		}
+
+		if( $this->is_csrf_token_required() && !$this->is_valid_csrf_token_given() ){
+			$this->login_page('csrf_token_expired');
+			exit;
 		}
 
 		$users = (array) $this->rencon->conf()->users;
@@ -91,7 +98,7 @@ class auth{
 			if( $action == 'logout' || $action == 'login' ){
 				$this->rencon->req()->set_param('a', null);
 			}
-			$this->login_page();
+			$this->login_page('failed');
 			exit;
 		}
 
@@ -125,14 +132,9 @@ class auth{
 	<body>
 		<div class="theme-container">
 			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
-			<?php if( strlen($this->rencon->req()->get_param('ADMIN_USER_FLG') ?? '') ){ ?>
+			<?php if( strlen($this->rencon->req()->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
-					<div>IDまたはパスワードが違います。</div>
-				</div>
-			<?php } ?>
-			<?php if( strlen($error_message ?? '') ){ ?>
-				<div class="alert alert-danger" role="alert">
-					<div><?= htmlspecialchars($error_message ?? '') ?></div>
+					<div><?= htmlspecialchars($this->lb->get('login_error.'.$error_message) ?? '') ?></div>
 				</div>
 			<?php } ?>
 

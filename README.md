@@ -21,6 +21,7 @@ composer require tomk79/rencon-builder
 - APIのルーティング機能と、APIキーの管理機能を追加した。
 - エラーログファイルに `.php` を与えて隠蔽するようになった。
 - bin を公開した。
+- その他、いくつかの細かい修正。
 
 ### tomk79/rencon-builder v0.2.0 (2023年8月29日)
 

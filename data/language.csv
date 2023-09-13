@@ -1,0 +1,37 @@
+,en,ja,zh,zh-TW
+page_title.logout,"Logout","ログアウト",,
+ui_label.ok,OK,OK,OK,OK
+ui_label.save,Save,保存する,保存,保存
+ui_label.cancel,Cancel,キャンセル,取消,取消
+ui_label.close,Close,閉じる,关闭,關閉
+ui_label.create,Create,作成する,,
+ui_label.finished,Finished,完了,,
+ui_label.anchor,Anchor,アンカー,,
+ui_label.search,Search,検索,,
+ui_label.back,Back,戻る,,
+ui_label.login,Login,ログイン,,
+ui_label.remove_this_module,"Remove",削除する,,
+ui_label.user_name,Name,お名前,,
+ui_label.user_id,User ID,ユーザーID,,
+ui_label.user_pw,Password,パスワード,,
+ui_label.user_email,E-mail,メールアドレス,,
+ui_label.user_role,Role,ロール,,
+ui_message.first_register_an_administrator_account,"First, register an administrator account.","はじめに、管理者アカウントを登録してください。",,
+ui_message.user_id_enable_char,"Single-byte alphanumeric characters, hyphens, and underscores can be used.","半角英数字、ハイフン、アンダースコア が使えます。",,
+ui_message.this_module_has_no_options,"This module has no options.","このモジュールにはオプションが定義されていません。",,
+ui_message.sending_data,"Sending data...","データを送信しています...",,
+ui_message.confirm_error,"There is any input errors. Please confirm.","入力エラーがあります。確認してください。",,
+ui_message.enter_only_when_changing_the_password,"Enter only when changing the password.","パスワードを変更する場合のみ入力してください。",,
+ui_message.save_completed,"Saving is complete.","保存を完了しました。",,
+ui_message.logged_out,"Logged out.","ログアウトしました。",,
+login_error.csrf_token_expired,"Token Expired.","認証トークンが無効か、期限が切れています。"
+login_error.user_id_is_required,"User ID is required.","ユーザーIDを入力してください。"
+login_error.invalid_user_id,"Invalid User ID.","ユーザーIDの形式が不正です。"
+login_error.failed,"Failed to login. Incorrect credentials.","ログインに失敗しました。 認証情報が正しくありません。"
+login_error.account_locked,"Account is locked. Please try again after a while.","アカウントがロックされています。しばらく時間をおいてお試しください。"
+error_message.invalid,"There is a problem with the input content.","入力内容に不備があります。",,
+error_message.invalid_user_id,"Malformed User ID.","不正な形式のユーザーIDです。",,
+error_message.invalid_email,"Malformed E-mail address.","不正な形式のメールアドレスです。",,
+error_message.required,"This is required.","必ず入力してください。",,
+error_message.required_select,"This is required.","必ず選択してください。",,
+error_message.required_user_id,"User ID is required.","ユーザーIDを入力してください。",,

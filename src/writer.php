@@ -219,6 +219,10 @@ class writer {
 		$rtn .= $framework_files->get('request');
 		$rtn .= $framework_files->get('user');
 
+		$langbank = $framework_files->get('langbank');
+		$langbank = str_replace('array(/*-- language.csv --*/)', $framework_files->get('language.csv'), $langbank);
+		$rtn .= $langbank;
+
 		$src_theme = $framework_files->get('theme');
 		$src_theme = str_replace('/* theme template */', $src_template, $src_theme);
 		$rtn .= $src_theme;

@@ -3038,6 +3038,432 @@ class user {
 
 }
 ?><?php
+/**
+ * langbank.php
+ */
+namespace renconFramework;
+
+/**
+ * langbank
+ */
+class LangBank{
+
+	private $fs;
+	private $pathCsv;
+	private $options = array();
+	private $langDb = array();
+	public $defaultLang;
+	public $lang;
+
+	/**
+	 * constructor
+	 */
+	public function __construct( $options = array() ){
+		$this->options = $options;
+		$this->fs = new \renconFramework\filesystem();
+
+		$this->langDb = array();
+
+		$csvAry = array (
+  0 => 
+  array (
+    0 => '',
+    1 => 'en',
+    2 => 'ja',
+    3 => 'zh',
+    4 => 'zh-TW',
+  ),
+  1 => 
+  array (
+    0 => 'page_title.logout',
+    1 => 'Logout',
+    2 => 'ログアウト',
+    3 => '',
+    4 => '',
+  ),
+  2 => 
+  array (
+    0 => 'ui_label.ok',
+    1 => 'OK',
+    2 => 'OK',
+    3 => 'OK',
+    4 => 'OK',
+  ),
+  3 => 
+  array (
+    0 => 'ui_label.save',
+    1 => 'Save',
+    2 => '保存する',
+    3 => '保存',
+    4 => '保存',
+  ),
+  4 => 
+  array (
+    0 => 'ui_label.cancel',
+    1 => 'Cancel',
+    2 => 'キャンセル',
+    3 => '取消',
+    4 => '取消',
+  ),
+  5 => 
+  array (
+    0 => 'ui_label.close',
+    1 => 'Close',
+    2 => '閉じる',
+    3 => '关闭',
+    4 => '關閉',
+  ),
+  6 => 
+  array (
+    0 => 'ui_label.create',
+    1 => 'Create',
+    2 => '作成する',
+    3 => '',
+    4 => '',
+  ),
+  7 => 
+  array (
+    0 => 'ui_label.finished',
+    1 => 'Finished',
+    2 => '完了',
+    3 => '',
+    4 => '',
+  ),
+  8 => 
+  array (
+    0 => 'ui_label.anchor',
+    1 => 'Anchor',
+    2 => 'アンカー',
+    3 => '',
+    4 => '',
+  ),
+  9 => 
+  array (
+    0 => 'ui_label.search',
+    1 => 'Search',
+    2 => '検索',
+    3 => '',
+    4 => '',
+  ),
+  10 => 
+  array (
+    0 => 'ui_label.back',
+    1 => 'Back',
+    2 => '戻る',
+    3 => '',
+    4 => '',
+  ),
+  11 => 
+  array (
+    0 => 'ui_label.login',
+    1 => 'Login',
+    2 => 'ログイン',
+    3 => '',
+    4 => '',
+  ),
+  12 => 
+  array (
+    0 => 'ui_label.remove_this_module',
+    1 => 'Remove',
+    2 => '削除する',
+    3 => '',
+    4 => '',
+  ),
+  13 => 
+  array (
+    0 => 'ui_label.user_name',
+    1 => 'Name',
+    2 => 'お名前',
+    3 => '',
+    4 => '',
+  ),
+  14 => 
+  array (
+    0 => 'ui_label.user_id',
+    1 => 'User ID',
+    2 => 'ユーザーID',
+    3 => '',
+    4 => '',
+  ),
+  15 => 
+  array (
+    0 => 'ui_label.user_pw',
+    1 => 'Password',
+    2 => 'パスワード',
+    3 => '',
+    4 => '',
+  ),
+  16 => 
+  array (
+    0 => 'ui_label.user_email',
+    1 => 'E-mail',
+    2 => 'メールアドレス',
+    3 => '',
+    4 => '',
+  ),
+  17 => 
+  array (
+    0 => 'ui_label.user_role',
+    1 => 'Role',
+    2 => 'ロール',
+    3 => '',
+    4 => '',
+  ),
+  18 => 
+  array (
+    0 => 'ui_message.first_register_an_administrator_account',
+    1 => 'First, register an administrator account.',
+    2 => 'はじめに、管理者アカウントを登録してください。',
+    3 => '',
+    4 => '',
+  ),
+  19 => 
+  array (
+    0 => 'ui_message.user_id_enable_char',
+    1 => 'Single-byte alphanumeric characters, hyphens, and underscores can be used.',
+    2 => '半角英数字、ハイフン、アンダースコア が使えます。',
+    3 => '',
+    4 => '',
+  ),
+  20 => 
+  array (
+    0 => 'ui_message.this_module_has_no_options',
+    1 => 'This module has no options.',
+    2 => 'このモジュールにはオプションが定義されていません。',
+    3 => '',
+    4 => '',
+  ),
+  21 => 
+  array (
+    0 => 'ui_message.sending_data',
+    1 => 'Sending data...',
+    2 => 'データを送信しています...',
+    3 => '',
+    4 => '',
+  ),
+  22 => 
+  array (
+    0 => 'ui_message.confirm_error',
+    1 => 'There is any input errors. Please confirm.',
+    2 => '入力エラーがあります。確認してください。',
+    3 => '',
+    4 => '',
+  ),
+  23 => 
+  array (
+    0 => 'ui_message.enter_only_when_changing_the_password',
+    1 => 'Enter only when changing the password.',
+    2 => 'パスワードを変更する場合のみ入力してください。',
+    3 => '',
+    4 => '',
+  ),
+  24 => 
+  array (
+    0 => 'ui_message.save_completed',
+    1 => 'Saving is complete.',
+    2 => '保存を完了しました。',
+    3 => '',
+    4 => '',
+  ),
+  25 => 
+  array (
+    0 => 'ui_message.logged_out',
+    1 => 'Logged out.',
+    2 => 'ログアウトしました。',
+    3 => '',
+    4 => '',
+  ),
+  26 => 
+  array (
+    0 => 'login_error.csrf_token_expired',
+    1 => 'Token Expired.',
+    2 => '認証トークンが無効か、期限が切れています。',
+  ),
+  27 => 
+  array (
+    0 => 'login_error.user_id_is_required',
+    1 => 'User ID is required.',
+    2 => 'ユーザーIDを入力してください。',
+  ),
+  28 => 
+  array (
+    0 => 'login_error.invalid_user_id',
+    1 => 'Invalid User ID.',
+    2 => 'ユーザーIDの形式が不正です。',
+  ),
+  29 => 
+  array (
+    0 => 'login_error.failed',
+    1 => 'Failed to login. Incorrect credentials.',
+    2 => 'ログインに失敗しました。 認証情報が正しくありません。',
+  ),
+  30 => 
+  array (
+    0 => 'login_error.account_locked',
+    1 => 'Account is locked. Please try again after a while.',
+    2 => 'アカウントがロックされています。しばらく時間をおいてお試しください。',
+  ),
+  31 => 
+  array (
+    0 => 'error_message.invalid',
+    1 => 'There is a problem with the input content.',
+    2 => '入力内容に不備があります。',
+    3 => '',
+    4 => '',
+  ),
+  32 => 
+  array (
+    0 => 'error_message.invalid_user_id',
+    1 => 'Malformed User ID.',
+    2 => '不正な形式のユーザーIDです。',
+    3 => '',
+    4 => '',
+  ),
+  33 => 
+  array (
+    0 => 'error_message.invalid_email',
+    1 => 'Malformed E-mail address.',
+    2 => '不正な形式のメールアドレスです。',
+    3 => '',
+    4 => '',
+  ),
+  34 => 
+  array (
+    0 => 'error_message.required',
+    1 => 'This is required.',
+    2 => '必ず入力してください。',
+    3 => '',
+    4 => '',
+  ),
+  35 => 
+  array (
+    0 => 'error_message.required_select',
+    1 => 'This is required.',
+    2 => '必ず選択してください。',
+    3 => '',
+    4 => '',
+  ),
+  36 => 
+  array (
+    0 => 'error_message.required_user_id',
+    1 => 'User ID is required.',
+    2 => 'ユーザーIDを入力してください。',
+    3 => '',
+    4 => '',
+  ),
+);
+
+		$langIdx = array();
+
+		foreach( $csvAry as $i1=>$row1 ){
+			if($i1 == 0){
+				foreach( $csvAry[$i1] as $i2=>$row2 ){
+					if($i2 == 0){
+						continue;
+					}
+					if($i2 == 1){
+						$this->defaultLang = $csvAry[$i1][$i2];
+						$this->lang = $csvAry[$i1][$i2];
+					}
+					$langIdx[$i2] = $csvAry[$i1][$i2];
+				}
+			}else{
+				$this->langDb[$csvAry[$i1][0]] = array();
+				foreach( $csvAry[$i1] as $i2=>$row2 ){
+					if($i2 == 0){continue;}
+					$this->langDb[$csvAry[$i1][0]][$langIdx[$i2]] = $csvAry[$i1][$i2];
+				}
+			}
+		}
+	}
+
+	/**
+	 * set Language
+	 */
+	public function setLang($lang){
+		$this->lang = $lang;
+		return true;
+	}
+
+	/**
+	 * get Language
+	 */
+	public function getLang(){
+		return $this->lang;
+	}
+
+	/**
+	 * get word by key
+	 *
+	 * @param string $key キー
+	 * @param string $bindData バインドデータ(省略可)
+	 * @param string $defaultValue デフォルト(キーが未定義だった場合)の戻り値
+	 * @return string 設定された言語に対応する文字列
+	 */
+	public function get($key){
+		$bindData = array();
+		$defaultValue = '---';
+
+		$args = func_get_args();
+		if( count($args) == 2 ){
+			if( is_string($args[1]) ){
+				$defaultValue = $args[1];
+			}else{
+				$bindData = $args[1];
+			}
+		}elseif( count($args) == 3 ){
+			$bindData = $args[1];
+			$defaultValue = $args[2];
+		}
+
+		if( !strlen(''.$defaultValue) ){
+			$defaultValue = '---';
+		}
+		$lang = $this->lang;
+		if( !isset($this->langDb[$key][$lang]) || !strlen(''.$this->langDb[$key][$lang]) ){
+			$lang = $this->defaultLang;
+		}
+		$rtn = $defaultValue;
+		if( isset($this->langDb[$key][$lang]) && strlen(''.$this->langDb[$key][$lang]) ){
+			$rtn = $this->langDb[$key][$lang];
+		}
+		$data = $this->options['bind'] ?? array();
+		foreach( $bindData as $bindDataKey=>$bindDataValue ){
+			$data[$bindDataKey] = $bindDataValue;
+		}
+		$data['_ENV'] = $this;
+
+		// Twig にバインドする
+		if( class_exists('\\Twig_Loader_Array') ){
+			// Twig ^1.35.3
+			$loader = new \Twig_Loader_Array(array(
+				'index' => $rtn,
+			));
+			$twig = new \Twig_Environment($loader);
+			$rtn = $twig->render('index', $data);
+
+		}elseif( class_exists('\\Twig\\Loader\\ArrayLoader') ){
+			// Twig ^3.0.0
+			$loader = new \Twig\Loader\ArrayLoader([
+				'index' => $rtn,
+			]);
+			$twig = new \Twig\Environment($loader);
+			$rtn = $twig->render('index', $data);
+
+		}
+
+		return $rtn;
+	}
+
+	/**
+	 * get word list
+	 */
+	public function getList(){
+		return $this->langDb;
+	}
+
+}
+?><?php
 namespace renconFramework;
 
 /**
@@ -3153,6 +3579,7 @@ namespace renconFramework;
 class auth{
 	private $rencon;
 	private $app_info;
+	private $lb;
 
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
@@ -3169,6 +3596,7 @@ class auth{
 	public function __construct( $rencon, $app_info ){
 		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
+		$this->lb = new LangBank();
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
@@ -3188,6 +3616,11 @@ class auth{
 		if( !$this->is_login_required() ){
 			// ユーザーが設定されていなければ、ログインの評価を行わない。
 			return;
+		}
+
+		if( $this->is_csrf_token_required() && !$this->is_valid_csrf_token_given() ){
+			$this->login_page('csrf_token_expired');
+			exit;
 		}
 
 		$users = (array) $this->rencon->conf()->users;
@@ -3235,7 +3668,7 @@ class auth{
 			if( $action == 'logout' || $action == 'login' ){
 				$this->rencon->req()->set_param('a', null);
 			}
-			$this->login_page();
+			$this->login_page('failed');
 			exit;
 		}
 
@@ -3269,14 +3702,9 @@ class auth{
 	<body>
 		<div class="theme-container">
 			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
-			<?php if( strlen($this->rencon->req()->get_param('ADMIN_USER_FLG') ?? '') ){ ?>
+			<?php if( strlen($this->rencon->req()->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
-					<div>IDまたはパスワードが違います。</div>
-				</div>
-			<?php } ?>
-			<?php if( strlen($error_message ?? '') ){ ?>
-				<div class="alert alert-danger" role="alert">
-					<div><?= htmlspecialchars($error_message ?? '') ?></div>
+					<div><?= htmlspecialchars($this->lb->get('login_error.'.$error_message) ?? '') ?></div>
 				</div>
 			<?php } ?>
 

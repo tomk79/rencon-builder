@@ -16,7 +16,8 @@ class mainTest extends PHPUnit\Framework\TestCase{
 	 */
 	public function testStandard(){
 		// ビルド
-		$command_rencon_builder = 'php '.realpath(__DIR__.'/../rencon-builder.php');
+		// $command_rencon_builder = 'php '.realpath(__DIR__.'/../rencon-builder.php');
+		$command_rencon_builder = realpath(__DIR__.'/../rencon-builder.phar');
 		$cd = realpath('.');
 		chdir(__DIR__.'/testdata/app01/');
 

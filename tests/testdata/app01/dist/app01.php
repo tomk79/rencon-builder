@@ -4347,7 +4347,7 @@ class test {
 ?><?php
 // php/sample.php
 ?><?php
-namespace tomk79\filesystem;
+namespace tomk79;
 // This is a dummy library.
 
 class filesystem {}

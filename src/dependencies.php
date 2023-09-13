@@ -79,7 +79,6 @@ class dependencies {
 			$json->require = new \stdClass();
 		}
 		foreach( $json->require as $package_name => $package_version ){
-			// var_dump($package_name);
 			$dependencies = new dependencies( $this->utils, $this->writer, $package_name );
 			$dependencies->scan();
 		}

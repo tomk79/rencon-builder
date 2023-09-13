@@ -13,8 +13,8 @@ class utils {
 	 * Constructor
 	 */
 	public function __construct(){
-		$this->fs = new \tomk79\filesystem();
-		$this->req = new \tomk79\request();
+		$this->fs = new filesystem();
+		$this->req = new request();
 	}
 
 	/**

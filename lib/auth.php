@@ -682,17 +682,23 @@ class auth{
 	 */
 	public function get_api_key_attributes( $api_key ){
 
+		$api_key_initial10 = substr($api_key, 0, 10);
+
 		// config に定義されたAPIキーでログインを試みる
 		$api_keys = (array) $this->rencon->conf()->api_keys;
-		if( is_array($api_keys[$api_key] ?? null) || is_object($api_keys[$api_key] ?? null) ){
-			return (object) $api_keys[$api_key];
+		if( is_array($api_keys[$api_key_initial10] ?? null) || is_object($api_keys[$api_key_initial10] ?? null) ){
+			if( password_verify($api_key, $api_keys[$api_key_initial10]['key']) ){
+				return (object) $api_keys[$api_key_initial10];
+			}
 		}
 
 		// ユーザーディレクトリにセットされたユーザーで試みる
 		if( strlen($this->realpath_api_key_json ?? '') && is_file($this->realpath_api_key_json) ){
 			$api_keys = dataDotPhp::read_json($this->realpath_api_key_json);
-			if( is_object($api_keys->{$api_key} ?? null) ){
-				return (object) $api_keys->{$api_key};
+			if( is_object($api_keys->{$api_key_initial10} ?? null) ){
+				if( password_verify($api_key, $api_keys->{$api_key_initial10}->key) ){
+					return (object) $api_keys->{$api_key};
+				}
 			}
 		}
 		return false;

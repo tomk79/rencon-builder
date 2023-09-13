@@ -37,7 +37,8 @@ class mainTest extends PHPUnit\Framework\TestCase{
 		?>
 <<?= '?php' ?> header('HTTP/1.1 404 Not Found'); echo('404 Not Found');exit(); <?= '?' ?>>
 {
-    "zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz": {
+    "12345zzzzz": {
+        "key": <?= json_encode( password_hash("12345zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz", PASSWORD_BCRYPT) ) ?>
 	}
 }
 		<?php

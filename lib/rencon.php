@@ -52,8 +52,8 @@ class rencon {
 	public function __construct( $conf ){
 		$this->fs = new filesystem();
 		$this->req = new request();
-		$this->logger = new logger($this);
 		$this->conf = new conf($this, $conf);
+		$this->logger = new logger($this);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
 	}
@@ -345,8 +345,8 @@ class rencon {
 	 */
 	public function realpath_private_data_dir( $localpath = null ){
 		$realpath_private_data_dir = null;
-		if( is_string( $this->conf->realpath_private_data_dir ?? null ) ){
-			$realpath_private_data_dir = $this->fs()->get_realpath($this->conf->realpath_private_data_dir.$localpath);
+		if( is_string( $this->conf()->realpath_private_data_dir ?? null ) ){
+			$realpath_private_data_dir = $this->fs()->get_realpath($this->conf()->realpath_private_data_dir.$localpath);
 		}
 		return $realpath_private_data_dir;
 	}

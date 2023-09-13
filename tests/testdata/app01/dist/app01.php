@@ -4384,7 +4384,7 @@ class auth{
 			$api_keys = dataDotPhp::read_json($this->realpath_api_key_json);
 			if( is_object($api_keys->{$api_key_initial10} ?? null) ){
 				if( password_verify($api_key, $api_keys->{$api_key_initial10}->key) ){
-					return (object) $api_keys->{$api_key};
+					return (object) $api_keys->{$api_key_initial10};
 				}
 			}
 		}

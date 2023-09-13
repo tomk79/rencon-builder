@@ -18,6 +18,7 @@ composer require tomk79/rencon-builder
 
 ### tomk79/rencon-builder v0.2.1 (リリース日未定)
 
+- アカウントロック機能を追加した。
 - APIのルーティング機能と、APIキーの管理機能を追加した。
 - エラーログファイルに `.php` を与えて隠蔽するようになった。
 - bin を公開した。

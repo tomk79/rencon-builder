@@ -14,6 +14,9 @@ class auth{
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
 
+	/** アカウントロック情報格納ディレクトリ */
+	private $realpath_account_lock;
+
 	/** APIキー定義ファイル */
 	private $realpath_api_key_json;
 
@@ -32,6 +35,12 @@ class auth{
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
 		if( is_string($this->realpath_admin_users ?? null) && !is_dir($this->realpath_admin_users) ){
 			$this->rencon->fs()->mkdir_r($this->realpath_admin_users);
+		}
+
+		// アカウントロック情報格納ディレクトリ
+		$this->realpath_account_lock = $this->rencon->realpath_private_data_dir('/account_lock/');
+		if( !is_dir($this->realpath_account_lock) ){
+			$this->rencon->fs()->mkdir_r($this->realpath_account_lock);
 		}
 
 		// APIキー定義ファイル
@@ -61,9 +70,33 @@ class auth{
 			$login_challenger_id = $this->rencon->req()->get_param('ADMIN_USER_ID');
 			$login_challenger_pw = $this->rencon->req()->get_param('ADMIN_USER_PW');
 
+			if( !strlen($login_challenger_id ?? '') ){
+				// User ID が未指定
+				// $this->clover->logger()->error_log('Failed to login. User ID is not set.');
+				$this->login_page('user_id_is_required');
+				exit;
+			}
+
+			if( !$this->validate_admin_user_id($login_challenger_id) ){
+				// 不正な形式のID
+				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
+				$this->login_page('invalid_user_id');
+				exit;
+			}
+
+			if( $this->is_account_locked( $login_challenger_id ) ){
+				// アカウントがロックされている
+				$this->admin_user_login_failed( $login_challenger_id );
+				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
+				$this->login_page('account_locked');
+				exit;
+			}
+
 			$user_info = $this->get_admin_user_info( $login_challenger_id );
 			if( !is_object($user_info) ){
 				// 不正なユーザーデータ
+				$this->admin_user_login_failed( $login_challenger_id );
+				// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -98,6 +131,9 @@ class auth{
 			if( $action == 'logout' || $action == 'login' ){
 				$this->rencon->req()->set_param('a', null);
 			}
+
+			$this->admin_user_login_failed( $login_challenger_id );
+			// $this->clover->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
 			$this->login_page('failed');
 			exit;
 		}
@@ -108,6 +144,96 @@ class auth{
 		}
 
 		return;
+	}
+
+	/**
+	 * ログアウトして終了する
+	 */
+	public function logout(){
+		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
+		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
+
+/* router:logout */
+
+		header('Content-type: text/html');
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<?= $this->mk_css() ?>
+	</head>
+	<body>
+		<div class="theme-container">
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
+			<p>Logged out.</p>
+			<p><a href="?">Back to Home</a></p>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
+		exit;
+	}
+
+	/**
+	 * ログインが必要か？
+	 */
+	public function is_login_required(){
+		if( (
+				!is_array($this->rencon->conf()->users ?? null)
+				&& !is_object($this->rencon->conf()->users ?? null)
+			) && (
+				is_null($this->rencon->conf()->realpath_private_data_dir)
+				|| !is_dir($this->rencon->conf()->realpath_private_data_dir)
+			) ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * ログインしているか確認する
+	 */
+	public function is_login(){
+		$ses_id = $this->rencon->app_id().'_ses_login_id';
+		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
+
+		$ADMIN_USER_ID = $this->rencon->req()->get_session($ses_id);
+		$ADMIN_USER_PW = $this->rencon->req()->get_session($ses_pw);
+		if( !is_string($ADMIN_USER_ID) || !strlen($ADMIN_USER_ID) ){
+			return false;
+		}
+		if( $this->is_csrf_token_required() && !$this->is_valid_csrf_token_given() ){
+			return false;
+		}
+
+		$admin_user_info = $this->get_admin_user_info( $ADMIN_USER_ID );
+		if( !is_object($admin_user_info) || !isset($admin_user_info->id) ){
+			return false;
+		}
+		if( $ADMIN_USER_ID !=$admin_user_info->id ){
+			return false;
+		}
+		if( $ADMIN_USER_PW != $admin_user_info->pw ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * パスワードをハッシュ化する
+	 */
+	public function password_hash($password){
+		if( !is_string($password) ){
+			return false;
+		}
+		return password_hash($password, PASSWORD_BCRYPT);
 	}
 
 	/**
@@ -154,41 +280,6 @@ class auth{
 <input type="hidden" name="CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
 			</form>
-		</div>
-	</body>
-</html>
-<?php
-		$rtn = ob_get_clean();
-		print $rtn;
-		exit;
-	}
-
-	/**
-	 * ログアウトして終了する
-	 */
-	public function logout(){
-		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
-		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
-
-/* router:logout */
-
-		header('Content-type: text/html');
-		ob_start();
-		?>
-<!doctype html>
-<html>
-	<head>
-		<meta charset="UTF-8" />
-		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="robots" content="nofollow, noindex, noarchive" />
-		<?= $this->mk_css() ?>
-	</head>
-	<body>
-		<div class="theme-container">
-			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
-			<p>Logged out.</p>
-			<p><a href="?">Back to Home</a></p>
 		</div>
 	</body>
 </html>
@@ -310,48 +401,71 @@ class auth{
 		return $src;
 	}
 
+
+	// --------------------------------------
+	// アカウントロック制御
+
 	/**
-	 * ログインが必要か？
+	 * 管理ユーザーアカウントがロックされているか確認する
 	 */
-	public function is_login_required(){
-		if( (
-				!is_array($this->rencon->conf()->users ?? null)
-				&& !is_object($this->rencon->conf()->users ?? null)
-			) && (
-				is_null($this->rencon->conf()->realpath_private_data_dir)
-				|| !is_dir($this->rencon->conf()->realpath_private_data_dir)
-			) ){
+	private function is_account_locked( $user_id ){
+		$realpath_json_php = $this->realpath_account_lock.urlencode($user_id).'.json.php';
+		$data = new \stdClass;
+		if( is_file($realpath_json_php) ){
+			$data = dataDotPhp::read_json($realpath_json_php);
+		}
+
+		if( !is_array($data->failed_log ?? null) ){
 			return false;
 		}
+
+		$counter = 0;
+		foreach( $data->failed_log as $log ){
+			$time = strtotime( $log->at );
+			if( $time > time() - (60 * 60) ){
+				// 60分以内の失敗ログがあればカウントする
+				$counter ++;
+			}
+			if( $counter >= 5 ){
+				// 失敗ログ 5回 でロックする
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * 管理ユーザーがログインに失敗したことを記録する
+	 */
+	private function admin_user_login_failed( $user_id ){
+		$realpath_json_php = $this->realpath_account_lock.urlencode($user_id).'.json.php';
+		$data = new \stdClass;
+		if( is_file($realpath_json_php) ){
+			$data = dataDotPhp::read_json($realpath_json_php);
+		}
+
+		if( !is_array($data->failed_log ?? null) ){
+			$data->last_failed = null;
+			$data->failed_log = array();
+		}
+		$failed_date = date('c');
+		$data->last_failed = $failed_date;
+		array_push($data->failed_log, (object) array(
+			"at" => $failed_date,
+			"client_ip" => $_SERVER['REMOTE_ADDR'] ?? null,
+		));
+
+		$result = dataDotPhp::write_json($realpath_json_php, $data);
 		return true;
 	}
 
 	/**
-	 * ログインしているか確認する
+	 * 管理ユーザーがログインに成功したことを記録する
 	 */
-	public function is_login(){
-		$ses_id = $this->rencon->app_id().'_ses_login_id';
-		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
-
-		$ADMIN_USER_ID = $this->rencon->req()->get_session($ses_id);
-		$ADMIN_USER_PW = $this->rencon->req()->get_session($ses_pw);
-		if( !is_string($ADMIN_USER_ID) || !strlen($ADMIN_USER_ID) ){
-			return false;
-		}
-		if( $this->is_csrf_token_required() && !$this->is_valid_csrf_token_given() ){
-			return false;
-		}
-
-		$admin_user_info = $this->get_admin_user_info( $ADMIN_USER_ID );
-		if( !is_object($admin_user_info) || !isset($admin_user_info->id) ){
-			return false;
-		}
-		if( $ADMIN_USER_ID !=$admin_user_info->id ){
-			return false;
-		}
-		if( $ADMIN_USER_PW != $admin_user_info->pw ){
-			return false;
-		}
+	private function admin_user_login_successful( $user_id ){
+		$realpath_json_php = $this->realpath_account_lock.urlencode($user_id).'.json.php';
+		$this->rencon->fs()->rm( $realpath_json_php );
 		return true;
 	}
 
@@ -507,16 +621,6 @@ class auth{
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * パスワードをハッシュ化する
-	 */
-	public function password_hash($password){
-		if( !is_string($password) ){
-			return false;
-		}
-		return password_hash($password, PASSWORD_BCRYPT);
 	}
 
 

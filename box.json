@@ -1,7 +1,8 @@
 {
     "directories": [
         "src",
-        "vendor"
+        "vendor/tomk79/filesystem/php",
+        "vendor/tomk79/request/php"
     ],
     "main": "rencon-builder.php",
     "output": "rencon-builder.phar",

@@ -750,8 +750,8 @@ class auth{
 	 * CSRFトークンの検証を行わない条件を調査
 	 */
 	private function is_csrf_token_required(){
-		if( $_SERVER['REQUEST_METHOD'] == 'GET' ){
-			// PXコマンドなしのGETのリクエストでは、CSRFトークンを要求しない
+		if( strtoupper($_SERVER['REQUEST_METHOD'] ?? '') == 'GET' ){
+			// GETのリクエストでは、CSRFトークンを要求しない
 			return false;
 		}
 		return true;
@@ -780,9 +780,13 @@ class auth{
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
-		foreach( $CSRF_TOKEN as $token ){
+		foreach( $CSRF_TOKEN as $idx => $token ){
 			if( $token['created_at'] < time() - $this->csrf_token_expire ){
-				continue; // 有効期限が切れていたら評価できない
+				// 有効期限が切れていたら評価できない。
+				// 配列から削除する。
+				unset($CSRF_TOKEN[$idx]);
+				$this->px->req()->set_session('CSRF_TOKEN', $CSRF_TOKEN);
+				continue;
 			}
 			if( $token['hash'] == $csrf_token ){
 				return true;

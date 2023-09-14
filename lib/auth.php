@@ -737,9 +737,7 @@ class auth{
 			$CSRF_TOKEN = array();
 		}
 
-		$id = $this->rencon->req()->get_param('ADMIN_USER_ID');
-		$rand = uniqid('clover'.$id, true);
-		$hash = md5( $rand );
+		$hash = bin2hex(random_bytes(32));
 		array_push($CSRF_TOKEN, array(
 			'hash' => $hash,
 			'created_at' => time(),
@@ -768,7 +766,7 @@ class auth{
 		if( !$csrf_token ){
 			$headers = getallheaders();
 			foreach($headers as $header_name=>$header_val){
-				if( strtolower($header_name) == 'x-px2-clover-admin-csrf-token' ){
+				if( strtolower($header_name) == 'x-rencon-admin-csrf-token' ){
 					$csrf_token = $header_val;
 					break;
 				}

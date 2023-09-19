@@ -17,6 +17,7 @@ $src .= '           "logger" => '.var_export(base64_encode( trim( file_get_conte
 $src .= '           "initializer" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/initializer.php' ) ) ), true).','."\n";
 $src .= '           "conf" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/conf.php' ) ) ), true).','."\n";
 $src .= '           "user" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/user.php' ) ) ), true).','."\n";
+$src .= '           "lang" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/lang.php' ) ) ), true).','."\n";
 $src .= '           "langbank" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/LangBank.php' ) ) ), true).','."\n";
 $src .= '           "theme" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/theme.php' ) ) ), true).','."\n";
 $src .= '           "auth" => '.var_export(base64_encode( trim( file_get_contents( __DIR__.'/../lib/auth.php' ) ) ), true).','."\n";

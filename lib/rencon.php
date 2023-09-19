@@ -25,6 +25,7 @@ exit();
 class rencon {
 
 	private $conf;
+	private $lang;
 	private $fs;
 	private $req;
 	private $logger;
@@ -53,6 +54,7 @@ class rencon {
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->conf = new conf($this, $conf);
+		$this->lang = new lang($this);
 		$this->logger = new logger($this);
 		$this->user = new user($this);
 		$this->resources = new resources($this);
@@ -78,6 +80,7 @@ class rencon {
 	}
 
 	public function conf(){ return $this->conf; }
+	public function lang(){ return $this->lang; }
 	public function fs(){ return $this->fs; }
 	public function req(){ return $this->req; }
 	public function logger(){ return $this->logger; }

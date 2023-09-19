@@ -23,14 +23,14 @@ class lang {
 	 */
 	public function __construct( $rencon ){
 		$this->rencon = $rencon;
-		$this->loginUserInfo = $this->rencon->auth()->get_login_user_info();
+		// $this->loginUserInfo = $this->rencon->auth()->get_login_user_info(); // TODO: 言語設定を取り出す
 		$this->lb = new LangBank();
 		if( strlen($this->rencon->req()->get_param('LANG') ?? '') ){
 			$this->lb->setLang( $this->rencon->req()->get_param('LANG') );
 		}elseif( strlen($this->loginUserInfo->lang ?? '') ){
 			$this->lb->setLang( $this->loginUserInfo->lang );
 		}else{
-			$this->lb->setLang( $this->px->lang() );
+			$this->lb->setLang( 'ja' );
 		}
 	}
 
@@ -42,3 +42,4 @@ class lang {
 	}
 
 }
+?>

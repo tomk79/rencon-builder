@@ -20,12 +20,6 @@ class auth {
 	/** request */
 	private $req;
 
-	/** logger */
-	private $logger;
-
-	/** language helper */
-	private $lang;
-
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
 
@@ -34,6 +28,12 @@ class auth {
 
 	/** CSRFトークンの有効期限 */
 	private $csrf_token_expire = 60 * 60;
+
+	/** Session Key: id */
+	private $session_key_id;
+
+	/** Session Key: pw */
+	private $session_key_pw;
 
 	/** APIキー定義ファイル */
 	private $realpath_api_key_json;
@@ -49,8 +49,10 @@ class auth {
 		$this->app_info = (object) $app_info;
 		$this->fs = $this->rencon->fs();
 		$this->req = $this->rencon->req();
-		$this->logger = $this->rencon->logger();
-		$this->lang = $this->rencon->lang();
+
+		// セッションキー
+		$this->session_key_id = $this->rencon->app_id().'_ses_login_id';
+		$this->session_key_pw = $this->rencon->app_id().'_ses_login_pw';
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
@@ -68,6 +70,15 @@ class auth {
 		$this->realpath_api_key_json = $this->rencon->realpath_private_data_dir('/api_keys.json.php');
 	}
 
+	/** $lang */
+	private function lang(){
+		return $this->rencon->lang();
+	}
+
+	/** $logger */
+	private function logger(){
+		return $this->rencon->logger();
+	}
 
 	/**
 	 * 認証プロセス
@@ -85,8 +96,6 @@ class auth {
 		}
 
 		$users = (array) $this->rencon->conf()->users;
-		$ses_id = $this->rencon->app_id().'_ses_login_id';
-		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
 
 		if( $this->req->get_param('ADMIN_USER_FLG') ){
 			$login_challenger_id = $this->req->get_param('ADMIN_USER_ID');
@@ -94,14 +103,14 @@ class auth {
 
 			if( !strlen($login_challenger_id ?? '') ){
 				// User ID が未指定
-				$this->logger->error_log('Failed to login. User ID is not set.');
+				$this->logger()->error_log('Failed to login. User ID is not set.');
 				$this->login_page('user_id_is_required');
 				exit;
 			}
 
 			if( !$this->validate_admin_user_id($login_challenger_id) ){
 				// 不正な形式のID
-				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
+				$this->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
 				$this->login_page('invalid_user_id');
 				exit;
 			}
@@ -109,7 +118,7 @@ class auth {
 			if( $this->is_account_locked( $login_challenger_id ) ){
 				// アカウントがロックされている
 				$this->admin_user_login_failed( $login_challenger_id );
-				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
+				$this->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
 				$this->login_page('account_locked');
 				exit;
 			}
@@ -118,7 +127,7 @@ class auth {
 			if( !is_object($user_info) ){
 				// 不正なユーザーデータ
 				$this->admin_user_login_failed( $login_challenger_id );
-				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
+				$this->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -128,23 +137,23 @@ class auth {
 			if( strlen($login_challenger_id ?? '') && strlen($login_challenger_pw ?? '') ){
 				// ログイン評価
 				if( $login_challenger_id == $admin_id && (password_verify($login_challenger_pw, $user_info->pw) || sha1($login_challenger_pw) == $user_info->pw) ){
-					$this->req->set_session($ses_id, $login_challenger_id);
-					$this->req->set_session($ses_pw, $user_info->pw);
+					$this->req->set_session($this->session_key_id, $login_challenger_id);
+					$this->req->set_session($this->session_key_pw, $user_info->pw);
 					header('Location: ?a='.urlencode($this->req->get_param('a') ?? ''));
 					exit;
 				}
 			}
 
 
-			$login_id = $this->req->get_session($ses_id);
-			$login_pw_hash = $this->req->get_session($ses_pw);
+			$login_id = $this->req->get_session($this->session_key_id);
+			$login_pw_hash = $this->req->get_session($this->session_key_pw);
 			if( strlen($login_id ?? '') && strlen($login_pw_hash ?? '') ){
 				// ログイン済みか評価
 				if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 					return;
 				}
-				$this->req->delete_session($ses_id);
-				$this->req->delete_session($ses_pw);
+				$this->req->delete_session($this->session_key_id);
+				$this->req->delete_session($this->session_key_pw);
 				$this->rencon->forbidden();
 				exit;
 			}
@@ -156,7 +165,7 @@ class auth {
 
 			if( !$this->is_login() ){
 				$this->admin_user_login_failed( $login_challenger_id );
-				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
+				$this->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -174,8 +183,8 @@ class auth {
 	 * ログアウトして終了する
 	 */
 	public function logout(){
-		$this->req->delete_session($this->rencon->app_id().'_ses_login_id');
-		$this->req->delete_session($this->rencon->app_id().'_ses_login_pw');
+		$this->req->delete_session($this->session_key_id);
+		$this->req->delete_session($this->session_key_pw);
 
 /* router:logout */
 
@@ -225,11 +234,8 @@ class auth {
 	 * ログインしているか確認する
 	 */
 	public function is_login(){
-		$ses_id = $this->rencon->app_id().'_ses_login_id';
-		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
-
-		$ADMIN_USER_ID = $this->req->get_session($ses_id);
-		$ADMIN_USER_PW = $this->req->get_session($ses_pw);
+		$ADMIN_USER_ID = $this->req->get_session($this->session_key_id);
+		$ADMIN_USER_PW = $this->req->get_session($this->session_key_pw);
 		if( !is_string($ADMIN_USER_ID) || !strlen($ADMIN_USER_ID) ){
 			return false;
 		}
@@ -284,7 +290,7 @@ class auth {
 			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
 			<?php if( strlen($this->req->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
-					<div><?= htmlspecialchars($this->lang->get('login_error.'.$error_message) ?? '') ?></div>
+					<div><?= htmlspecialchars($this->lang()->get('login_error.'.$error_message) ?? '') ?></div>
 				</div>
 			<?php } ?>
 
@@ -512,7 +518,7 @@ class auth {
 
 		$admin_user_list = $this->get_admin_user_list();
 		$new_profile = json_decode(json_encode($new_profile));
-		$current_user_info = $this->get_admin_user_info_full( $this->req->get_session($this->rencon->app_id().'_ses_login_id') );
+		$current_user_info = $this->get_admin_user_info_full( $this->req->get_session($this->session_key_id) );
 		if( count($admin_user_list) ){
 			// NOTE: 始めてのユーザーを作成するときは、現在のパスワードを求めない。ログインしていることを前提にしない。
 			if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
@@ -576,7 +582,7 @@ class auth {
 	 * @return object 現在のユーザーの情報 (ただしパスワードハッシュを含まない)
 	 */
 	public function get_login_user_info(){
-		$login_user_id = $this->req->get_session($this->rencon->app_id().'_ses_login_id');
+		$login_user_id = $this->req->get_session($this->session_key_id);
 		if( !is_string($login_user_id) || !strlen($login_user_id) ){
 			// ログインしていない
 			return null;
@@ -705,48 +711,51 @@ class auth {
 		if( !strlen($user_info->id ?? '') ){
 			// IDが未指定
 			$rtn->is_valid = false;
-			$rtn->errors->id = array($this->lang->get('error_message.required_user_id'));
+			$rtn->errors->id = array($this->lang()->get('error_message.required_user_id'));
 		}elseif( !$this->validate_admin_user_id($user_info->id) ){
 			// 不正な形式のID
 			$rtn->is_valid = false;
-			$rtn->errors->id = array($this->lang->get('error_message.invalid_user_id'));
+			$rtn->errors->id = array($this->lang()->get('error_message.invalid_user_id'));
 		}
 		if( !isset($user_info->name) || !strlen($user_info->name) ){
 			$rtn->is_valid = false;
-			$rtn->errors->name = array($this->lang->get('error_message.required'));
+			$rtn->errors->name = array($this->lang()->get('error_message.required'));
 		}
 		if( !isset($user_info->pw) || !strlen($user_info->pw) ){
 			$rtn->is_valid = false;
-			$rtn->errors->pw = array($this->lang->get('error_message.required'));
+			$rtn->errors->pw = array($this->lang()->get('error_message.required'));
 		}
-		if( !isset($user_info->lang) || !strlen($user_info->lang) ){
-			$rtn->is_valid = false;
-			$rtn->errors->lang = array($this->lang->get('error_message.required_select'));
-		}
-		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
-			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
-				$rtn->is_valid = false;
-				$rtn->errors->email = array($this->lang->get('error_message.invalid_email'));
-			}
-		}
-		if( !isset($user_info->role) || !strlen($user_info->role) ){
-			$rtn->is_valid = false;
-			$rtn->errors->role = array($this->lang->get('error_message.required_select'));
-		}
-		switch( $user_info->role ){
-			case 'admin':
-			case 'specialist':
-			case 'member':
-				break;
-			default:
-				$rtn->is_valid = false;
-				$rtn->errors->role = array($this->lang->get('error_message.invalid_role'));
-				break;
-		}
+
+		// TODO: 入力欄を追加する↓
+
+		// if( !isset($user_info->lang) || !strlen($user_info->lang) ){
+		// 	$rtn->is_valid = false;
+		// 	$rtn->errors->lang = array($this->lang()->get('error_message.required_select'));
+		// }
+		// if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
+		// 	if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
+		// 		$rtn->is_valid = false;
+		// 		$rtn->errors->email = array($this->lang()->get('error_message.invalid_email'));
+		// 	}
+		// }
+		// if( !isset($user_info->role) || !strlen($user_info->role) ){
+		// 	$rtn->is_valid = false;
+		// 	$rtn->errors->role = array($this->lang()->get('error_message.required_select'));
+		// }
+		// switch( $user_info->role ){
+		// 	case 'admin':
+		// 	case 'specialist':
+		// 	case 'member':
+		// 		break;
+		// 	default:
+		// 		$rtn->is_valid = false;
+		// 		$rtn->errors->role = array($this->lang()->get('error_message.invalid_role'));
+		// 		break;
+		// }
 		if( $rtn->is_valid ){
 			$rtn->message = 'OK';
 		}else{
-			$rtn->message = $this->lang->get('error_message.invalid');
+			$rtn->message = $this->lang()->get('error_message.invalid');
 		}
 		return $rtn;
 	}
@@ -787,10 +796,13 @@ class auth {
 	/**
 	 * 管理ユーザーデータファイルの書き込み
 	 */
-	private function write_admin_user_data( $user_id, $data ){
+	private function write_admin_user_data( $user_id, $new_profile ){
+		$new_profile = json_decode( json_encode($new_profile) );
+		unset($new_profile->pw_retype);
+
 		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
 		$realpath_json_php = $realpath_json.'.php';
-		$result = dataDotPhp::write_json($realpath_json_php, $data);
+		$result = dataDotPhp::write_json($realpath_json_php, $new_profile);
 		if( !$result ){
 			return false;
 		}
@@ -971,19 +983,19 @@ class auth {
 			return false;
 		}
 
-		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
-		if( !is_array($CSRF_TOKEN) ){
-			$CSRF_TOKEN = array();
+		$CSRF_TOKEN_LIST = $this->req->get_session('CSRF_TOKEN');
+		if( !is_array($CSRF_TOKEN_LIST) ){
+			$CSRF_TOKEN_LIST = array();
 		}
-		foreach( $CSRF_TOKEN as $idx => $token ){
+		foreach( $CSRF_TOKEN_LIST as $idx => $token ){
 			if( $token['created_at'] < time() - $this->csrf_token_expire ){
 				// 有効期限が切れていたら評価できない。
 				// 配列から削除する。
-				unset($CSRF_TOKEN[$idx]);
-				$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN);
+				unset($CSRF_TOKEN_LIST[$idx]);
+				$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN_LIST);
 				continue;
 			}
-			if( $token['hash'] == $csrf_token ){
+			if( $token['hash'] == $CSRF_TOKEN ){
 				return true;
 			}
 		}

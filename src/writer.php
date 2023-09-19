@@ -219,6 +219,7 @@ class writer {
 		$rtn .= $framework_files->get('initializer');
 		$rtn .= $framework_files->get('conf');
 		$rtn .= $framework_files->get('user');
+		$rtn .= $framework_files->get('lang');
 
 		$langbank = $framework_files->get('langbank');
 		$langbank = str_replace('array(/*-- language.csv --*/)', $framework_files->get('language.csv'), $langbank);

@@ -66,11 +66,12 @@ Deny from all
 				'name' => $this->rencon->req()->get_param('ADMIN_USER_NAME'),
 				'id' => $this->rencon->req()->get_param('ADMIN_USER_ID'),
 				'pw' => $this->rencon->req()->get_param('ADMIN_USER_PW'),
+				'pw_retype' => $this->rencon->req()->get_param('admin_user_pw_retype'),
 				'lang' => $this->rencon->req()->get_param('ADMIN_USER_LANG'),
 				'email' => $this->rencon->req()->get_param('admin_user_email'),
 				'role' => 'admin',
 			);
-			$result = $this->rencon->auth()->create_admin_user( $user_info );
+			$result = $this->rencon->auth()->create_admin_user( $user_info, null ); // NOTE: 最初のユーザー作成時には、現在のパスワードを確認しない。
 			if( $result->result ){
 				header('Location:'.'?a=');
 				exit;
@@ -119,6 +120,14 @@ Deny from all
 	<tr>
 		<th>Password:</th>
 		<td><input type="password" name="ADMIN_USER_PW" value="" />
+			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
+			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
+			<?php } ?>
+		</td>
+	</tr>
+	<tr>
+		<th>Password (retype):</th>
+		<td><input type="password" name="admin_user_pw_retype" value="" />
 			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
 			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
 			<?php } ?>

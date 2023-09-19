@@ -23,8 +23,8 @@ class auth {
 	/** logger */
 	private $logger;
 
-	/** LangBank */
-	private $lb;
+	/** language helper */
+	private $lang;
 
 	/** 管理ユーザー定義ディレクトリ */
 	private $realpath_admin_users;
@@ -50,7 +50,7 @@ class auth {
 		$this->fs = $this->rencon->fs();
 		$this->req = $this->rencon->req();
 		$this->logger = $this->rencon->logger();
-		$this->lb = new LangBank();
+		$this->lang = $this->rencon->lang();
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
@@ -284,7 +284,7 @@ class auth {
 			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
 			<?php if( strlen($this->req->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
-					<div><?= htmlspecialchars($this->lb->get('login_error.'.$error_message) ?? '') ?></div>
+					<div><?= htmlspecialchars($this->lang->get('login_error.'.$error_message) ?? '') ?></div>
 				</div>
 			<?php } ?>
 
@@ -705,33 +705,33 @@ class auth {
 		if( !strlen($user_info->id ?? '') ){
 			// IDが未指定
 			$rtn->is_valid = false;
-			$rtn->errors->id = array('User ID is required.');
+			$rtn->errors->id = array($this->lang->get('error_message.required_user_id'));
 		}elseif( !$this->validate_admin_user_id($user_info->id) ){
 			// 不正な形式のID
 			$rtn->is_valid = false;
-			$rtn->errors->id = array('Malformed User ID.');
+			$rtn->errors->id = array($this->lang->get('error_message.invalid_user_id'));
 		}
 		if( !isset($user_info->name) || !strlen($user_info->name) ){
 			$rtn->is_valid = false;
-			$rtn->errors->name = array('This is required.');
+			$rtn->errors->name = array($this->lang->get('error_message.required'));
 		}
 		if( !isset($user_info->pw) || !strlen($user_info->pw) ){
 			$rtn->is_valid = false;
-			$rtn->errors->pw = array('This is required.');
+			$rtn->errors->pw = array($this->lang->get('error_message.required'));
 		}
 		if( !isset($user_info->lang) || !strlen($user_info->lang) ){
 			$rtn->is_valid = false;
-			$rtn->errors->lang = array('This is required.');
+			$rtn->errors->lang = array($this->lang->get('error_message.required_select'));
 		}
 		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
 			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
 				$rtn->is_valid = false;
-				$rtn->errors->email = array('Malformed E-mail address.');
+				$rtn->errors->email = array($this->lang->get('error_message.invalid_email'));
 			}
 		}
 		if( !isset($user_info->role) || !strlen($user_info->role) ){
 			$rtn->is_valid = false;
-			$rtn->errors->role = array('This is required.');
+			$rtn->errors->role = array($this->lang->get('error_message.required_select'));
 		}
 		switch( $user_info->role ){
 			case 'admin':
@@ -740,13 +740,13 @@ class auth {
 				break;
 			default:
 				$rtn->is_valid = false;
-				$rtn->errors->role = array('Invalid value.');
+				$rtn->errors->role = array($this->lang->get('error_message.invalid_role'));
 				break;
 		}
 		if( $rtn->is_valid ){
 			$rtn->message = 'OK';
 		}else{
-			$rtn->message = 'There is a problem with the input content.';
+			$rtn->message = $this->lang->get('error_message.invalid');
 		}
 		return $rtn;
 	}

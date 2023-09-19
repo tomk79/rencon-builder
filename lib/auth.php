@@ -2,13 +2,28 @@
 namespace renconFramework;
 
 /**
- * auth class
+ * rencon: Authentication
  *
  * @author Tomoya Koyanagi <tomk79@gmail.com>
  */
-class auth{
+class auth {
+
+	/** renconオブジェクト */
 	private $rencon;
+
+	/** Application Info */
 	private $app_info;
+
+	/** filesystem */
+	private $fs;
+
+	/** request */
+	private $req;
+
+	/** logger */
+	private $logger;
+
+	/** LangBank */
 	private $lb;
 
 	/** 管理ユーザー定義ディレクトリ */
@@ -17,35 +32,42 @@ class auth{
 	/** アカウントロック情報格納ディレクトリ */
 	private $realpath_account_lock;
 
-	/** APIキー定義ファイル */
-	private $realpath_api_key_json;
-
 	/** CSRFトークンの有効期限 */
 	private $csrf_token_expire = 60 * 60;
 
+	/** APIキー定義ファイル */
+	private $realpath_api_key_json;
+
 	/**
 	 * Constructor
+	 *
+	 * @param object $rencon $renconオブジェクト
+	 * @param object $app_info Application Info
 	 */
 	public function __construct( $rencon, $app_info ){
 		$this->rencon = $rencon;
 		$this->app_info = (object) $app_info;
+		$this->fs = $this->rencon->fs();
+		$this->req = $this->rencon->req();
+		$this->logger = $this->rencon->logger();
 		$this->lb = new LangBank();
 
 		// 管理ユーザー定義ディレクトリ
 		$this->realpath_admin_users = $this->rencon->realpath_private_data_dir('/admin_users/');
 		if( is_string($this->realpath_admin_users ?? null) && !is_dir($this->realpath_admin_users) ){
-			$this->rencon->fs()->mkdir_r($this->realpath_admin_users);
+			$this->fs->mkdir_r($this->realpath_admin_users);
 		}
 
 		// アカウントロック情報格納ディレクトリ
 		$this->realpath_account_lock = $this->rencon->realpath_private_data_dir('/account_lock/');
 		if( !is_dir($this->realpath_account_lock) ){
-			$this->rencon->fs()->mkdir_r($this->realpath_account_lock);
+			$this->fs->mkdir_r($this->realpath_account_lock);
 		}
 
 		// APIキー定義ファイル
 		$this->realpath_api_key_json = $this->rencon->realpath_private_data_dir('/api_keys.json.php');
 	}
+
 
 	/**
 	 * 認証プロセス
@@ -66,20 +88,20 @@ class auth{
 		$ses_id = $this->rencon->app_id().'_ses_login_id';
 		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
 
-		if( $this->rencon->req()->get_param('ADMIN_USER_FLG') ){
-			$login_challenger_id = $this->rencon->req()->get_param('ADMIN_USER_ID');
-			$login_challenger_pw = $this->rencon->req()->get_param('ADMIN_USER_PW');
+		if( $this->req->get_param('ADMIN_USER_FLG') ){
+			$login_challenger_id = $this->req->get_param('ADMIN_USER_ID');
+			$login_challenger_pw = $this->req->get_param('ADMIN_USER_PW');
 
 			if( !strlen($login_challenger_id ?? '') ){
 				// User ID が未指定
-				$this->rencon->logger()->error_log('Failed to login. User ID is not set.');
+				$this->logger->error_log('Failed to login. User ID is not set.');
 				$this->login_page('user_id_is_required');
 				exit;
 			}
 
 			if( !$this->validate_admin_user_id($login_challenger_id) ){
 				// 不正な形式のID
-				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
+				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. Invalid user ID format.');
 				$this->login_page('invalid_user_id');
 				exit;
 			}
@@ -87,16 +109,16 @@ class auth{
 			if( $this->is_account_locked( $login_challenger_id ) ){
 				// アカウントがロックされている
 				$this->admin_user_login_failed( $login_challenger_id );
-				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
+				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. Account is LOCKED.');
 				$this->login_page('account_locked');
 				exit;
 			}
 
-			$user_info = $this->get_admin_user_info( $login_challenger_id );
+			$user_info = $this->get_admin_user_info_full( $login_challenger_id );
 			if( !is_object($user_info) ){
 				// 不正なユーザーデータ
 				$this->admin_user_login_failed( $login_challenger_id );
-				$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
+				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'. User undefined.');
 				$this->login_page('failed');
 				exit;
 			}
@@ -106,36 +128,38 @@ class auth{
 			if( strlen($login_challenger_id ?? '') && strlen($login_challenger_pw ?? '') ){
 				// ログイン評価
 				if( $login_challenger_id == $admin_id && (password_verify($login_challenger_pw, $user_info->pw) || sha1($login_challenger_pw) == $user_info->pw) ){
-					$this->rencon->req()->set_session($ses_id, $login_challenger_id);
-					$this->rencon->req()->set_session($ses_pw, $user_info->pw);
-					header('Location: ?a='.urlencode($this->rencon->req()->get_param('a') ?? ''));
+					$this->req->set_session($ses_id, $login_challenger_id);
+					$this->req->set_session($ses_pw, $user_info->pw);
+					header('Location: ?a='.urlencode($this->req->get_param('a') ?? ''));
 					exit;
 				}
 			}
 
 
-			$login_id = $this->rencon->req()->get_session($ses_id);
-			$login_pw_hash = $this->rencon->req()->get_session($ses_pw);
+			$login_id = $this->req->get_session($ses_id);
+			$login_pw_hash = $this->req->get_session($ses_pw);
 			if( strlen($login_id ?? '') && strlen($login_pw_hash ?? '') ){
 				// ログイン済みか評価
 				if( array_key_exists($login_id, $users) && $users[$login_id] == $login_pw_hash ){
 					return;
 				}
-				$this->rencon->req()->delete_session($ses_id);
-				$this->rencon->req()->delete_session($ses_pw);
+				$this->req->delete_session($ses_id);
+				$this->req->delete_session($ses_pw);
 				$this->rencon->forbidden();
 				exit;
 			}
 
-			$action = $this->rencon->req()->get_param('a') ?? null;
+			$action = $this->req->get_param('a') ?? null;
 			if( $action == 'logout' || $action == 'login' ){
-				$this->rencon->req()->set_param('a', null);
+				$this->req->set_param('a', null);
 			}
 
-			$this->admin_user_login_failed( $login_challenger_id );
-			$this->rencon->logger()->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
-			$this->login_page('failed');
-			exit;
+			if( !$this->is_login() ){
+				$this->admin_user_login_failed( $login_challenger_id );
+				$this->logger->error_log('Failed to login as user \''.$login_challenger_id.'\'.');
+				$this->login_page('failed');
+				exit;
+			}
 		}
 
 		if( !$this->is_login() ){
@@ -150,8 +174,8 @@ class auth{
 	 * ログアウトして終了する
 	 */
 	public function logout(){
-		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_id');
-		$this->rencon->req()->delete_session($this->rencon->app_id().'_ses_login_pw');
+		$this->req->delete_session($this->rencon->app_id().'_ses_login_id');
+		$this->req->delete_session($this->rencon->app_id().'_ses_login_pw');
 
 /* router:logout */
 
@@ -204,8 +228,8 @@ class auth{
 		$ses_id = $this->rencon->app_id().'_ses_login_id';
 		$ses_pw = $this->rencon->app_id().'_ses_login_pw';
 
-		$ADMIN_USER_ID = $this->rencon->req()->get_session($ses_id);
-		$ADMIN_USER_PW = $this->rencon->req()->get_session($ses_pw);
+		$ADMIN_USER_ID = $this->req->get_session($ses_id);
+		$ADMIN_USER_PW = $this->req->get_session($ses_pw);
 		if( !is_string($ADMIN_USER_ID) || !strlen($ADMIN_USER_ID) ){
 			return false;
 		}
@@ -213,7 +237,7 @@ class auth{
 			return false;
 		}
 
-		$admin_user_info = $this->get_admin_user_info( $ADMIN_USER_ID );
+		$admin_user_info = $this->get_admin_user_info_full( $ADMIN_USER_ID );
 		if( !is_object($admin_user_info) || !isset($admin_user_info->id) ){
 			return false;
 		}
@@ -258,7 +282,7 @@ class auth{
 	<body>
 		<div class="theme-container">
 			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
-			<?php if( strlen($this->rencon->req()->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
+			<?php if( strlen($this->req->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
 				<div class="alert alert-danger" role="alert">
 					<div><?= htmlspecialchars($this->lb->get('login_error.'.$error_message) ?? '') ?></div>
 				</div>
@@ -278,7 +302,7 @@ class auth{
 <p><button type="submit">Login</button></p>
 <input type="hidden" name="ADMIN_USER_FLG" value="1" />
 <input type="hidden" name="CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
-<input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->req->get_param('a') ?? '') ?>" />
 			</form>
 		</div>
 	</body>
@@ -465,28 +489,65 @@ class auth{
 	 */
 	private function admin_user_login_successful( $user_id ){
 		$realpath_json_php = $this->realpath_account_lock.urlencode($user_id).'.json.php';
-		$this->rencon->fs()->rm( $realpath_json_php );
+		$this->fs->rm( $realpath_json_php );
 		return true;
 	}
 
 
 	// --------------------------------------
-	// 管理ユーザーの作成画面
+	// 管理ユーザー情報操作
 
 	/**
 	 * 管理ユーザーを作成する
 	 *
-	 * @param array|object $user_info 作成するユーザー情報
+	 * @param array|object $new_profile 作成するユーザー情報
+	 * @param string $login_password ログインしているユーザーの現在のパスワード
 	 */
-	public function create_admin_user( $user_info ){
+	public function create_admin_user( $new_profile, $login_password ){
 		$result = (object) array(
 			'result' => true,
 			'message' => 'OK',
 			'errors' => (object) array(),
 		);
-		$user_info = (object) $user_info;
 
-		$user_info_validated = $this->validate_admin_user_info($user_info);
+		$admin_user_list = $this->get_admin_user_list();
+		$new_profile = json_decode(json_encode($new_profile));
+		$current_user_info = $this->get_admin_user_info_full( $this->req->get_session($this->rencon->app_id().'_ses_login_id') );
+		if( count($admin_user_list) ){
+			// NOTE: 始めてのユーザーを作成するときは、現在のパスワードを求めない。ログインしていることを前提にしない。
+			if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+				// 現在のパスワードを確認
+				return (object) array(
+					'result' => false,
+					'message' => 'Authentication Failed.',
+					'errors' => (object) array(
+						'current_pw' => array('現在のログインパスワードを正しく入力してください。'),
+					),
+				);
+			}
+		}
+
+		if( $this->admin_user_data_exists( $new_profile->id ) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'そのユーザーIDはすでに存在します。',
+				'errors' => (object) array(
+					'id' => array('そのユーザーIDはすでに存在します。')
+				),
+			);
+		}
+
+		if( (strlen($new_profile->pw ?? '') || strlen($new_profile->pw_retype ?? '')) && $new_profile->pw !== $new_profile->pw_retype ){
+			return (object) array(
+				'result' => false,
+				'message' => 'Password not matched.',
+				'errors' => (object) array(
+					'pw_retype' => array('パスワードが一致しません。'),
+				),
+			);
+		}
+
+		$user_info_validated = $this->validate_admin_user_info($new_profile);
 		if( !$user_info_validated->is_valid ){
 			// 不正な形式のユーザー情報
 			return (object) array(
@@ -496,16 +557,8 @@ class auth{
 			);
 		}
 
-		if( $this->admin_user_data_exists( $user_info->id ) ){
-			return (object) array(
-				'result' => false,
-				'message' => 'そのユーザーIDはすでに存在します。',
-				'errors' => (object) array(),
-			);
-		}
-
-		$user_info->pw = $this->password_hash($user_info->pw);
-		if( !$this->write_admin_user_data($user_info->id, $user_info) ){
+		$new_profile->pw = $this->password_hash($new_profile->pw);
+		if( !$this->write_admin_user_data($new_profile->id, $new_profile) ){
 			return (object) array(
 				'result' => false,
 				'message' => 'ユーザー情報の保存に失敗しました。',
@@ -516,11 +569,80 @@ class auth{
 	}
 
 	/**
+	 * 現在のログインユーザーの情報を取得する
+	 *
+	 * NOTE: このメソッドは、ユーザーパスワードのハッシュ情報を含まない情報を返します。
+	 *
+	 * @return object 現在のユーザーの情報 (ただしパスワードハッシュを含まない)
+	 */
+	public function get_login_user_info(){
+		$login_user_id = $this->req->get_session($this->rencon->app_id().'_ses_login_id');
+		if( !is_string($login_user_id) || !strlen($login_user_id) ){
+			// ログインしていない
+			return null;
+		}
+
+		if( !$this->validate_admin_user_id($login_user_id) ){
+			// 不正な形式のID
+			return null;
+		}
+
+		$user_info = $this->get_admin_user_info( $login_user_id );
+		if( !is_object($user_info) ){
+			return null;
+		}
+		unset( $user_info->pw ); // パスワードハッシュは出さない
+		unset( $user_info->pw_retype ); unset( $user_info->current_pw ); // 存在しないはずだが、不具合があったときの保険
+		return $user_info;
+	}
+
+	/**
+	 * 管理者ユーザーの一覧を取得する
+	 */
+	public function get_admin_user_list(){
+		if( !is_dir($this->realpath_admin_users) ){
+			return array();
+		}
+		$filelist = $this->fs->ls($this->realpath_admin_users);
+		$rtn = array();
+		foreach( $filelist as $basename ){
+			$user_id = preg_replace( '/\.json(?:\.php)?$/si', '', $basename );
+			$json = (array) $this->read_admin_user_data( $user_id );
+			unset($json['pw']); // パスワードハッシュはクライアントに送出しない
+			unset($json['pw_retype'], $json['current_pw']); // 存在しないはずだが、不具合があったときの保険
+			array_push($rtn, $json);
+		}
+		return $rtn;
+	}
+
+
+	/**
 	 * 管理者ユーザーの情報を取得する
 	 *
-	 * このメソッドの戻り値には、パスワードハッシュが含まれます。
+	 * NOTE: このメソッドは、ユーザーパスワードのハッシュ情報を含まない情報を返します。
+	 *
+	 * @param string $user_id 対象のユーザーID
+	 * @return object 対象のユーザー情報 (パスワードハッシュを含まない)
 	 */
 	private function get_admin_user_info($user_id){
+		$user_info = $this->get_admin_user_info_full($user_id);
+		if( !$user_info ){
+			return null;
+		}
+		unset( $user_info->pw ); // パスワードハッシュは出さない
+		unset( $user_info->pw_retype ); unset( $user_info->current_pw ); // 存在しないはずだが、不具合があったときの保険
+		return $user_info;
+	}
+
+	/**
+	 * 管理者ユーザーの情報を取得する
+	 *
+	 * *Attention*: このメソッドの戻り値には、パスワードハッシュが含まれます。
+	 *
+	 * @param string $user_id 対象のユーザーID
+	 * @return object 対象のユーザー情報 (パスワードハッシュを含む)
+	 */
+	private function get_admin_user_info_full($user_id){
 		if( !$this->validate_admin_user_id($user_id) ){
 			// 不正な形式のID
 			return null;
@@ -543,7 +665,7 @@ class auth{
 
 		// ユーザーディレクトリにセットされたユーザーで試みる
 		$user_info = null;
-		if( strlen($this->realpath_admin_users ?? '') && is_dir($this->realpath_admin_users) && $this->rencon->fs()->ls($this->realpath_admin_users) ){
+		if( strlen($this->realpath_admin_users ?? '') && is_dir($this->realpath_admin_users) && $this->fs->ls($this->realpath_admin_users) ){
 			if( $this->admin_user_data_exists( $user_id ) ){
 				$user_info = $this->read_admin_user_data( $user_id );
 				if( !isset($user_info->id) || $user_info->id != $user_id ){
@@ -597,11 +719,29 @@ class auth{
 			$rtn->is_valid = false;
 			$rtn->errors->pw = array('This is required.');
 		}
+		if( !isset($user_info->lang) || !strlen($user_info->lang) ){
+			$rtn->is_valid = false;
+			$rtn->errors->lang = array('This is required.');
+		}
 		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
 			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
 				$rtn->is_valid = false;
 				$rtn->errors->email = array('Malformed E-mail address.');
 			}
+		}
+		if( !isset($user_info->role) || !strlen($user_info->role) ){
+			$rtn->is_valid = false;
+			$rtn->errors->role = array('This is required.');
+		}
+		switch( $user_info->role ){
+			case 'admin':
+			case 'specialist':
+			case 'member':
+				break;
+			default:
+				$rtn->is_valid = false;
+				$rtn->errors->role = array('Invalid value.');
+				break;
 		}
 		if( $rtn->is_valid ){
 			$rtn->message = 'OK';
@@ -611,39 +751,9 @@ class auth{
 		return $rtn;
 	}
 
-	/**
-	 * 管理ユーザーデータファイルが存在するか確認する
-	 */
-	private function admin_user_data_exists( $user_id ){
-		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
-		$realpath_json_php = $realpath_json.'.php';
-		if( is_file( $realpath_json ) || is_file($realpath_json_php) ){
-			return true;
-		}
-		return false;
-	}
-
 
 	// --------------------------------------
 	// 管理ユーザーデータファイルの読み書き
-
-	/**
-	 * 管理ユーザーデータファイルの書き込み
-	 */
-	private function write_admin_user_data( $user_id, $data ){
-		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
-		$realpath_json_php = $realpath_json.'.php';
-		$result = dataDotPhp::write_json($realpath_json_php, $data);
-		if( !$result ){
-			return false;
-		}
-		$this->rencon->fs()->chmod_r($this->realpath_admin_users, 0700, 0700);
-
-		if( is_file($realpath_json) ){
-			unlink($realpath_json); // 素のJSONがあったら削除する
-		}
-		return $result;
-	}
 
 	/**
 	 * 管理ユーザーデータファイルの読み込み
@@ -660,6 +770,91 @@ class auth{
 			return $data;
 		}
 		return false;
+	}
+
+	/**
+	 * 管理ユーザーデータファイルが存在するか確認する
+	 */
+	private function admin_user_data_exists( $user_id ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+		if( is_file( $realpath_json ) || is_file($realpath_json_php) ){
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * 管理ユーザーデータファイルの書き込み
+	 */
+	private function write_admin_user_data( $user_id, $data ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+		$result = dataDotPhp::write_json($realpath_json_php, $data);
+		if( !$result ){
+			return false;
+		}
+		$this->fs->chmod_r($this->realpath_admin_users, 0700, 0700);
+
+		if( is_file($realpath_json) ){
+			unlink($realpath_json); // 素のJSONがあったら削除する
+		}
+		return $result;
+	}
+
+	/**
+	 * 管理ユーザーデータファイルを改名
+	 */
+	private function rename_admin_user_data( $user_id, $new_user_id ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+
+		$realpath_new_json = $this->realpath_admin_users.urlencode($new_user_id).'.json';
+		$realpath_new_json_php = $realpath_new_json.'.php';
+
+		$result = true;
+
+		if( is_file( $realpath_json ) ){
+			$res_rename = $this->fs->rename(
+				$realpath_json,
+				$realpath_new_json
+			);
+			if( !$res_rename ){
+				$result = false;
+			}
+		}
+
+		if( is_file( $realpath_json_php ) ){
+			$res_rename = $this->fs->rename(
+				$realpath_json_php,
+				$realpath_new_json_php
+			);
+			if( !$res_rename ){
+				$result = false;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * 管理ユーザーデータファイルを削除
+	 */
+	private function remove_admin_user_data( $user_id ){
+		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
+		$realpath_json_php = $realpath_json.'.php';
+		$result = true;
+		if( is_file($realpath_json) ){
+			if(!unlink($realpath_json)){
+				$result = false;
+			}
+		}
+		if( is_file($realpath_json_php) ){
+			if(!unlink($realpath_json_php)){
+				$result = false;
+			}
+		}
+		return $result;
 	}
 
 
@@ -712,7 +907,7 @@ class auth{
 	 * CSRFトークンを取得する
 	 */
 	public function get_csrf_token(){
-		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
@@ -732,7 +927,7 @@ class auth{
 	 * 新しいCSRFトークンを発行する
 	 */
 	private function create_csrf_token(){
-		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
@@ -742,7 +937,7 @@ class auth{
 			'hash' => $hash,
 			'created_at' => time(),
 		));
-		$this->rencon->req()->set_session('CSRF_TOKEN', $CSRF_TOKEN);
+		$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN);
 		return $hash;
 	}
 
@@ -762,21 +957,21 @@ class auth{
 	 */
 	public function is_valid_csrf_token_given(){
 
-		$csrf_token = $this->rencon->req()->get_param('CSRF_TOKEN');
-		if( !$csrf_token ){
+		$CSRF_TOKEN = $this->req->get_param('CSRF_TOKEN');
+		if( !$CSRF_TOKEN ){
 			$headers = getallheaders();
 			foreach($headers as $header_name=>$header_val){
 				if( strtolower($header_name) == 'x-rencon-admin-csrf-token' ){
-					$csrf_token = $header_val;
+					$CSRF_TOKEN = $header_val;
 					break;
 				}
 			}
 		}
-		if( !$csrf_token ){
+		if( !$CSRF_TOKEN ){
 			return false;
 		}
 
-		$CSRF_TOKEN = $this->rencon->req()->get_session('CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
@@ -785,7 +980,7 @@ class auth{
 				// 有効期限が切れていたら評価できない。
 				// 配列から削除する。
 				unset($CSRF_TOKEN[$idx]);
-				$this->px->req()->set_session('CSRF_TOKEN', $CSRF_TOKEN);
+				$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN);
 				continue;
 			}
 			if( $token['hash'] == $csrf_token ){

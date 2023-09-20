@@ -46,7 +46,7 @@
     "autoload": {
         "psr-4": {
             "tomk79\\renconBuilder\\": [
-                "src"
+                "src_rencon_builder"
             ]
         }
     }

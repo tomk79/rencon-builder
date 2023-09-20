@@ -1,6 +1,6 @@
 {
     "directories": [
-        "src",
+        "src_rencon_builder",
         "vendor"
     ],
     "main": "rencon-builder.php",

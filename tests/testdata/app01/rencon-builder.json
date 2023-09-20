@@ -18,7 +18,7 @@
         },
         "api_preview": {
             "title": "API Preview",
-            "page": "app01\\test::api_preview"
+            "page": "app01\\api_test::api_preview"
         },
         "test": {
             "title": "Test",

@@ -219,7 +219,7 @@ var_dump( $_REQUEST );
 ),
 'api_preview' => (object) array(
 	"title" => 'API Preview',
-	"page" => 'app01\\test::api_preview',
+	"page" => 'app01\\api_test::api_preview',
 	"allow_methods" => NULL,
 ),
 'test' => (object) array(
@@ -4870,6 +4870,31 @@ class auth {
 namespace app01;
 
 class api_test {
+    static public function api_preview($rencon){
+        ?>
+        <script>
+        function sendApiRequest(apiName, apiKey){
+            fetch('?api='+apiName, {
+                method: 'post',
+                headers: {
+                    'X-API-KEY': apiKey,
+                }
+            }).then((data)=>{
+				return data.json();
+			}).then((data)=>{
+				console.log(data);
+				alert(JSON.stringify(data));
+			});
+            return;
+        }
+        </script>
+        <p><button type="button" onclick="sendApiRequest('api.test.test001', '12345zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz');">api.test.test001</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa', '12345zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz');">api.test.aaaaaa</button></p>
+        <p><button type="button" onclick="sendApiRequest('api.test.bbbbbb', 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx');">api.test.bbbbbb (無効なAPIキーを指定)</button></p>
+        <?php
+        return;
+    }
+
 	static public function test001( $rencon ){
 		$rtn = array();
 		$rtn['result'] = true;
@@ -4934,24 +4959,6 @@ class test {
     }
     static public function post( $rencon ){
         echo "test::post()"."\n";
-        return;
-    }
-    static public function api_preview($rencon){
-        ?>
-        <script>
-        function sendApiRequest(apiName, apiKey){
-            fetch('?api='+apiName, {
-                method: 'post',
-                headers: {
-                    'X-API-KEY': apiKey,
-                }
-            });
-            return;
-        }
-        </script>
-        <p><button type="button" onclick="sendApiRequest('api.test.test001', 'zzzzzzzzzzz-zzzzzzzzz-zzzzzzzzz');">api.test.test001</button></p>
-        <p><button type="button" onclick="sendApiRequest('api.test.aaaaaa', 'xxxxx-xxxxx-xxxxxxxxxxx-xxxxxxx');">api.test.aaaaaa</button></p>
-        <?php
         return;
     }
 }

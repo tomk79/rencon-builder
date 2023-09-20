@@ -28,6 +28,11 @@
             "title": "Post Test",
             "allow_methods": "post",
             "page": "app01\\test::post"
+        },
+        "profile": {
+            "title": "Edit Profile",
+            "allow_methods": ["get", "post"],
+            "page": "app01\\profile::form"
         }
     },
     "api_route": {

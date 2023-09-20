@@ -725,33 +725,30 @@ class auth {
 			$rtn->is_valid = false;
 			$rtn->errors->pw = array($this->lang()->get('error_message.required'));
 		}
-
-		// TODO: 入力欄を追加する↓
-
-		// if( !isset($user_info->lang) || !strlen($user_info->lang) ){
-		// 	$rtn->is_valid = false;
-		// 	$rtn->errors->lang = array($this->lang()->get('error_message.required_select'));
-		// }
-		// if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
-		// 	if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
-		// 		$rtn->is_valid = false;
-		// 		$rtn->errors->email = array($this->lang()->get('error_message.invalid_email'));
-		// 	}
-		// }
-		// if( !isset($user_info->role) || !strlen($user_info->role) ){
-		// 	$rtn->is_valid = false;
-		// 	$rtn->errors->role = array($this->lang()->get('error_message.required_select'));
-		// }
-		// switch( $user_info->role ){
-		// 	case 'admin':
-		// 	case 'specialist':
-		// 	case 'member':
-		// 		break;
-		// 	default:
-		// 		$rtn->is_valid = false;
-		// 		$rtn->errors->role = array($this->lang()->get('error_message.invalid_role'));
-		// 		break;
-		// }
+		if( !isset($user_info->lang) || !strlen($user_info->lang) ){
+			$rtn->is_valid = false;
+			$rtn->errors->lang = array($this->lang()->get('error_message.required_select'));
+		}
+		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
+			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
+				$rtn->is_valid = false;
+				$rtn->errors->email = array($this->lang()->get('error_message.invalid_email'));
+			}
+		}
+		if( !isset($user_info->role) || !strlen($user_info->role) ){
+			$rtn->is_valid = false;
+			$rtn->errors->role = array($this->lang()->get('error_message.required_select'));
+		}
+		switch( $user_info->role ){
+			case 'admin':
+			case 'specialist':
+			case 'member':
+				break;
+			default:
+				$rtn->is_valid = false;
+				$rtn->errors->role = array($this->lang()->get('error_message.invalid_role'));
+				break;
+		}
 		if( $rtn->is_valid ){
 			$rtn->message = 'OK';
 		}else{

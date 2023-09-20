@@ -232,6 +232,14 @@ var_dump( $_REQUEST );
 	"page" => 'app01\\test::post',
 	"allow_methods" => 'post',
 ),
+'profile' => (object) array(
+	"title" => 'Edit Profile',
+	"page" => 'app01\\profile::form',
+	"allow_methods" => array (
+  0 => 'get',
+  1 => 'post',
+),
+),
 
 		);
 
@@ -4940,6 +4948,18 @@ class sample {
         $src = ob_get_clean();
         echo $rencon->theme()->bind($src);
         exit;
+    }
+}
+?><?php
+
+namespace app01;
+
+class profile {
+    static public function form( $rencon ){
+        ?>
+        <p>開発中...</p>
+        <?php
+        return;
     }
 }
 ?><?php

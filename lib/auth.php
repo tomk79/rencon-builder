@@ -797,12 +797,30 @@ class auth {
 	 * 管理ユーザーデータファイルの書き込み
 	 */
 	private function write_admin_user_data( $user_id, $new_profile ){
+		// deepcopy
 		$new_profile = json_decode( json_encode($new_profile) );
-		unset($new_profile->pw_retype);
+
+		if( !is_string($user_id) || !strlen($user_id ?? '') ){
+			return false;
+		}
+		if( !is_object($new_profile) ){
+			return false;
+		}
+		if( $new_profile->id !== $user_id ){
+			return false;
+		}
+
+		$write_data = (object) array();
+		$write_data->name = $new_profile->name ?? null;
+		$write_data->id = $new_profile->id ?? null;
+		$write_data->pw = $new_profile->pw ?? null;
+		$write_data->lang = $new_profile->lang ?? null;
+		$write_data->email = $new_profile->email ?? null;
+		$write_data->role = $new_profile->role ?? null;
 
 		$realpath_json = $this->realpath_admin_users.urlencode($user_id).'.json';
 		$realpath_json_php = $realpath_json.'.php';
-		$result = dataDotPhp::write_json($realpath_json_php, $new_profile);
+		$result = dataDotPhp::write_json($realpath_json_php, $write_data);
 		if( !$result ){
 			return false;
 		}

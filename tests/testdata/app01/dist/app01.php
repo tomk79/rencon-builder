@@ -4024,26 +4024,54 @@ class auth {
 	}
 
 	/**
-	 * ログアウトする
+	 * ログアウトして終了する
 	 */
 	public function logout(){
-		$pxcmd = $this->req->get_param('PX');
-		if( !$this->is_login() && $pxcmd == 'admin.logout' ){
-			echo $this->clover->view()->bind(
-				'/system/logout.twig',
-				array(
-					'url_backto' => $this->px->href( $this->req->get_request_file_path() ),
-				)
-			);
-			exit;
-		}
+		$this->req->delete_session($this->session_key_id);
+		$this->req->delete_session($this->session_key_pw);
 
-		$user_id = $this->req->get_session('ADMIN_USER_ID');
-		$this->req->delete_session('ADMIN_USER_ID');
-		$this->req->delete_session('ADMIN_USER_PW');
-		$this->logger()->log('User \''.$user_id.'\' logged out.');
-		header('Location:'.$this->px->href( $this->req->get_request_file_path().'?PX='.htmlspecialchars(''.$pxcmd) ));
+
+
+		header('Content-type: text/html');
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<?= $this->mk_css() ?>
+	</head>
+	<body>
+		<div class="theme-container">
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
+			<p>Logged out.</p>
+			<p><a href="?">Back to Home</a></p>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
 		exit;
+	}
+
+	/**
+	 * ログインが必要か？
+	 */
+	public function is_login_required(){
+		if( (
+				!is_array($this->rencon->conf()->users ?? null)
+				&& !is_object($this->rencon->conf()->users ?? null)
+			) && (
+				is_null($this->rencon->conf()->realpath_private_data_dir)
+				|| !is_dir($this->rencon->conf()->realpath_private_data_dir)
+			) ){
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -4083,42 +4111,168 @@ class auth {
 	}
 
 	/**
-	 * ログイン画面を表示する
+	 * ログイン画面を表示して終了する
 	 */
-	private function login_page( $error_message = null ){
-		$this->px->set_status(403);
+	public function login_page( $error_message = null ){
+		header('Content-type: text/html');
 
-		$is_html_page = false;
 
-		$command = $this->px->get_px_command();
-		if( !isset($command[0]) ){
-			// プレビューにはHTMLを返す
-			$is_html_page = true;
-		}elseif( $command[0] == 'admin' && (!isset($command[1]) || $command[1] != 'api') ){
-			// 管理画面(api以外)にはHTMLを返す
-			$is_html_page = true;
-		}
 
-		if( $is_html_page ){
-			echo $this->clover->view()->bind(
-				'/system/login.twig',
-				array(
-					'url_backto' => '?',
-					'ADMIN_USER_ID' => $this->req->get_param('ADMIN_USER_ID'),
-					'csrf_token' => $this->get_csrf_token(),
-					'error_message' => ($error_message ? $this->lang()->get('login_error.'.$error_message) : ''),
-				)
-			);
-			exit;
-		}
+		ob_start();
+		?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="nofollow, noindex, noarchive" />
+		<?= $this->mk_css() ?>
+	</head>
+	<body>
+		<div class="theme-container">
+			<h1><?= htmlspecialchars( $this->app_info->name ?? '' ) ?></h1>
+			<?php if( strlen($this->req->get_param('ADMIN_USER_FLG') ?? '') && strlen($error_message ?? '') ){ ?>
+				<div class="alert alert-danger" role="alert">
+					<div><?= htmlspecialchars($this->lang()->get('login_error.'.$error_message) ?? '') ?></div>
+				</div>
+			<?php } ?>
 
-		$this->px->header('Content-type: application/json');
-		echo json_encode(array(
-			'result' => false,
-			'message' => ($error_message ? $this->lang()->get('login_error.'.$error_message) : ''),
-		));
+			<form action="?" method="post">
+<table>
+	<tr>
+		<th>ID:</th>
+		<td><input type="text" name="ADMIN_USER_ID" value="" /></td>
+	</tr>
+	<tr>
+		<th>Password:</th>
+		<td><input type="password" name="ADMIN_USER_PW" value="" /></td>
+	</tr>
+</table>
+<p><button type="submit">Login</button></p>
+<input type="hidden" name="ADMIN_USER_FLG" value="1" />
+<input type="hidden" name="CSRF_TOKEN" value="<?= htmlspecialchars($this->get_csrf_token()) ?>" />
+<input type="hidden" name="a" value="<?= htmlspecialchars($this->req->get_param('a') ?? '') ?>" />
+			</form>
+		</div>
+	</body>
+</html>
+<?php
+		$rtn = ob_get_clean();
+		print $rtn;
 		exit;
+	}
 
+
+	/**
+	 * CSSを生成
+	 */
+	private function mk_css(){
+		ob_start();?>
+		<style>
+			html, body {
+				background-color: #e7e7e7;
+				color: #333;
+				font-size: 16px;
+				margin: 0;
+				padding: 0;
+			}
+			body,input,textarea,select,option,button{
+				font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif, system-ui;
+			}
+			.theme-container {
+				box-sizing: border-box;
+				text-align: center;
+				padding: 4em 20px;
+				margin: 30px auto;
+				width: calc(100% - 20px);
+				max-width: 600px;
+				background-color: #f6f6f6;
+				border: 1px solid #bbb;
+				border-radius: 5px;
+				box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+			}
+			h1 {
+				font-size: 22px;
+			}
+			table{
+				margin: 0 auto;
+				max-width: 100%;
+			}
+			th {
+				text-align: right;
+				padding: 3px;
+			}
+			td {
+				text-align: left;
+				padding: 3px;
+			}
+			input[type=text],
+			input[type=password]{
+				display: inline-block;
+				box-sizing: border-box;
+				width: 160px;
+				min-width: 50px;
+				max-width: 100%;
+				padding: .375rem .75rem;
+				font-size: 1em;
+				font-weight: normal;
+				line-height: 1.5;
+				color: #333;
+				background-color: #f6f6f6;
+				background-clip: padding-box;
+				border: 1px solid #ced4da;
+				border-radius: .25rem;
+				transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+			}
+			input[type=text]:focus,
+			input[type=password]:focus{
+				color: #333;
+				background-color: #fff;
+				border-color: #80bdff;
+				outline: 0;
+				box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
+			}
+
+			button {
+				display: inline-block;
+				border-radius: 3px;
+				background-color: #f5fbfe;
+				color: #00a0e6;
+				border: 1px solid #00a0e6;
+				box-shadow: 0 2px 0px rgba(0,0,0,0.1);
+				padding: 0.5em 2em;
+				font-size:1em;
+				font-weight: normal;
+				line-height: 1;
+				text-decoration: none;
+				text-align: center;
+				cursor: pointer;
+				box-sizing: border-box;
+				align-items: stretch;
+				transition:
+					color 0.1s,
+					background-color 0.1s,
+					transform 0.1s
+				;
+			}
+			button:focus,
+			button:hover{
+				background-color: #d9f1fb;
+			}
+			button:hover{
+				background-color: #ccecfa;
+			}
+			button:active{
+				background-color: #00a0e6;
+				color: #fff;
+			}
+
+		</style>
+
+		<?php
+		$src = ob_get_clean();
+		return $src;
 	}
 
 
@@ -4344,6 +4498,22 @@ class auth {
 			return null;
 		}
 
+		// config に定義されたユーザーでログインを試みる
+		$users = (array) $this->rencon->conf()->users;
+		if( is_string($users[$user_id] ?? null) ){
+			return (object) array(
+				"name" => $user_id,
+				"id" => $user_id,
+				"pw" => $users[$user_id],
+				"lang" => null,
+				"email" => null,
+				"role" => "admin",
+			);
+		}elseif( is_array($users[$user_id] ?? null) || is_object($users[$user_id] ?? null) ){
+			return (object) $users[$user_id];
+		}
+
+		// ユーザーディレクトリにセットされたユーザーで試みる
 		$user_info = null;
 		if( strlen($this->realpath_admin_users ?? '') && is_dir($this->realpath_admin_users) && $this->fs->ls($this->realpath_admin_users) ){
 			if( $this->admin_user_data_exists( $user_id ) ){
@@ -4356,266 +4526,6 @@ class auth {
 		}
 		return is_null($user_info) ? $user_info : (object) $user_info;
 	}
-
-	/**
-	 * 現在のログインユーザー自身の情報を更新する
-	 *
-	 * @param array|object $new_profile 変更する新しいユーザー情報
-	 * @param string $login_password ログインしているユーザーの現在のパスワード
-	 */
-	public function update_login_user_info( $new_profile, $login_password ){
-		$new_profile = json_decode(json_encode($new_profile));
-		$login_user_id = $this->req->get_session('ADMIN_USER_ID');
-		if( !is_string($login_user_id) || !strlen($login_user_id) ){
-			// ログインしていない
-			return (object) array(
-				'result' => false,
-				'message' => 'Authentication failed.',
-				'errors' => (object) array(),
-			);
-		}
-
-		$allow_profile_keys = array(
-			'id',
-			'name',
-			'lang',
-			'pw',
-			'pw_retype',
-			'email',
-			// 'role', // 自分のロールは変更できない
-		);
-		foreach( $new_profile as $key=>$val ){
-			if( array_search($key, $allow_profile_keys) === false ){
-				unset($new_profile->{$key}); // 変更できないキーを削除する
-			}
-		}
-		if( !strlen($new_profile->pw || '') && !strlen($new_profile->pw_retype || '') ){
-			unset($new_profile->pw);
-			unset($new_profile->pw_retype);
-		}
-		$rtn = $this->update_admin_user_info( $login_user_id, $new_profile, $login_password );
-
-		if( $rtn->result ){
-			// ログインユーザーの情報を更新
-			$new_login_user_id = $login_user_id;
-			if( isset($new_profile->id) && is_string($new_profile->id) ){
-				$new_login_user_id = $new_profile->id;
-			}
-			$this->req->set_session('ADMIN_USER_ID', $new_login_user_id);
-			if( isset($new_profile->pw) && is_string($new_profile->pw) && strlen($new_profile->pw) ){
-				$new_user_info = $this->get_admin_user_info_full($new_login_user_id);
-				$this->req->set_session('ADMIN_USER_PW', $new_user_info->pw);
-			}
-		}
-
-		return $rtn;
-	}
-
-	/**
-	 * 管理者ユーザーの情報を更新する
-	 *
-	 * @param string $target_user_id 変更対象のユーザーID
-	 * @param array|object $new_profile 変更する新しいユーザー情報
-	 * @param string $login_password ログインしているユーザーの現在のパスワード
-	 */
-	public function update_admin_user_info( $target_user_id, $new_profile, $login_password ){
-		$new_profile = json_decode(json_encode($new_profile));
-		$result = (object) array(
-			'result' => true,
-			'message' => 'OK',
-			'errors' => (object) array(),
-		);
-
-		$current_user_info = $this->get_admin_user_info_full( $this->req->get_session('ADMIN_USER_ID') );
-		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
-			// 現在のパスワードを確認
-			return (object) array(
-				'result' => false,
-				'message' => 'Authentication Failed.',
-				'errors' => (object) array(
-					'current_pw' => array('現在のログインパスワードを正しく入力してください。'),
-				),
-			);
-		}
-
-		if( !is_string($target_user_id) || !strlen($target_user_id) ){
-			// 更新対象が未指定
-			return (object) array(
-				'result' => false,
-				'message' => 'Target not set.',
-				'errors' => (object) array(),
-			);
-		}
-
-		if( !$this->validate_admin_user_id($target_user_id) ){
-			// 不正な形式のID
-			return (object) array(
-				'result' => false,
-				'message' => 'Invalid Login User ID.',
-				'errors' => (object) array(),
-			);
-		}
-
-		$user_info = $this->get_admin_user_info_full( $target_user_id );
-		if( !is_object($user_info) ){
-			return (object) array(
-				'result' => false,
-				'message' => 'Failed to get user information.',
-				'errors' => (object) array(),
-			);
-		}
-
-		if( (strlen($new_profile->pw ?? '') || strlen($new_profile->pw_retype ?? '')) && $new_profile->pw !== $new_profile->pw_retype ){
-			return (object) array(
-				'result' => false,
-				'message' => 'Password not matched.',
-				'errors' => (object) array(
-					'pw_retype' => array('パスワードが一致しません。'),
-				),
-			);
-		}
-
-		$profile_keys = array(
-			'id',
-			'name',
-			'lang',
-			'pw',
-			'email',
-			'role',
-		);
-		foreach( $profile_keys as $key ){
-			// 変更項目の整理
-			if( !property_exists($new_profile, $key) ){
-				continue;
-			}
-			$val = $new_profile->{$key} ?? null;
-			if( $key == 'pw' ){
-				if( !is_string($val) || !strlen($val) ){
-					continue;
-				}
-				$user_info->{$key} = $this->password_hash($val);
-				continue;
-			}
-
-			$user_info->{$key} = $val;
-		}
-
-		$user_info_validated = $this->validate_admin_user_info($user_info);
-		if( !$user_info_validated->is_valid ){
-			// 不正な形式のユーザー情報
-			return (object) array(
-				'result' => false,
-				'message' => $user_info_validated->message,
-				'errors' => $user_info_validated->errors,
-			);
-		}
-
-
-		if( $target_user_id != $user_info->id && $this->admin_user_data_exists($user_info->id) ){
-			// 既に存在します。
-			return (object) array(
-				'result' => false,
-				'message' => '新しいユーザーIDは既に存在します。',
-				'errors' => (object) array(
-					'id' => array('新しいユーザーIDは既に存在します。'),
-				),
-			);
-		}
-
-		// 新しいIDのためにファイル名を変更
-		$res_rename = $this->rename_admin_user_data($target_user_id, $user_info->id);
-		if( !$res_rename ){
-			return (object) array(
-				'result' => false,
-				'message' => 'ユーザーIDの変更に失敗しました。',
-				'errors' => (object) array(),
-			);
-		}
-
-		if( !$this->write_admin_user_data($user_info->id, $user_info) ){
-			return (object) array(
-				'result' => false,
-				'message' => 'ユーザー情報の保存に失敗しました。',
-				'errors' => (object) array(),
-			);
-		}
-
-		$log_message = 'Admin user \''.$user_info->id.'\' info updated.';
-		if($target_user_id != $user_info->id){
-			$log_message .= '; ID changed \''.$target_user_id.'\' to \''.$user_info->id.'\'';
-		}
-		if(isset($new_profile->pw) && is_string($new_profile->pw) && strlen($new_profile->pw)){
-			$log_message .= '; Password changed';
-		}
-		$this->logger()->log($log_message);
-
-		return $result;
-	}
-
-
-	/**
-	 * 管理者ユーザーの情報を削除する
-	 *
-	 * @param string $target_user_id 削除対象のユーザーID
-	 * @param string $login_password ログインしているユーザーの現在のパスワード
-	 */
-	public function delete_admin_user_info( $target_user_id, $login_password ){
-		$current_user_info = $this->get_admin_user_info_full( $this->req->get_session('ADMIN_USER_ID') );
-		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
-			// 現在のパスワードを確認
-			return (object) array(
-				'result' => false,
-				'message' => 'Authentication Failed.',
-				'errors' => (object) array(
-					'current_pw' => array('現在のログインパスワードを正しく入力してください。'),
-				),
-			);
-		}
-
-		$result = (object) array(
-			'result' => true,
-			'message' => 'OK',
-			'errors' => (object) array(),
-		);
-		if( !is_string($target_user_id) || !strlen($target_user_id) ){
-			// 削除対象が未指定
-			return (object) array(
-				'result' => false,
-				'message' => '削除対象を指定してください。',
-				'errors' => (object) array(),
-			);
-		}
-
-		if( !$this->validate_admin_user_id($target_user_id) ){
-			// 不正な形式のID
-			return (object) array(
-				'result' => false,
-				'message' => 'ログインユーザーのIDが不正です。',
-				'errors' => (object) array(),
-			);
-		}
-
-		$user_info = $this->get_admin_user_info_full( $target_user_id );
-		if( !is_object($user_info) ){
-			return (object) array(
-				'result' => false,
-				'message' => 'ユーザー情報の取得に失敗しました。',
-				'errors' => (object) array(),
-			);
-		}
-
-		if( !$this->remove_admin_user_data($user_info->id) ){
-			return (object) array(
-				'result' => false,
-				'message' => 'ユーザー情報の削除に失敗しました。',
-				'errors' => (object) array(),
-			);
-		}
-
-		return $result;
-	}
-
-
 
 	/**
 	 * Validation: ユーザーID
@@ -4659,30 +4569,33 @@ class auth {
 			$rtn->is_valid = false;
 			$rtn->errors->pw = array($this->lang()->get('error_message.required'));
 		}
-		if( !isset($user_info->lang) || !strlen($user_info->lang) ){
-			$rtn->is_valid = false;
-			$rtn->errors->lang = array($this->lang()->get('error_message.required_select'));
-		}
-		if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
-			if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
-				$rtn->is_valid = false;
-				$rtn->errors->email = array($this->lang()->get('error_message.invalid_email'));
-			}
-		}
-		if( !isset($user_info->role) || !strlen($user_info->role) ){
-			$rtn->is_valid = false;
-			$rtn->errors->role = array($this->lang()->get('error_message.required_select'));
-		}
-		switch( $user_info->role ){
-			case 'admin':
-			case 'specialist':
-			case 'member':
-				break;
-			default:
-				$rtn->is_valid = false;
-				$rtn->errors->role = array($this->lang()->get('error_message.invalid_role'));
-				break;
-		}
+
+		// TODO: 入力欄を追加する↓
+
+		// if( !isset($user_info->lang) || !strlen($user_info->lang) ){
+		// 	$rtn->is_valid = false;
+		// 	$rtn->errors->lang = array($this->lang()->get('error_message.required_select'));
+		// }
+		// if( isset($user_info->email) && is_string($user_info->email) && strlen($user_info->email) ){
+		// 	if( !preg_match('/^[^@\/\\\\]+\@[^@\/\\\\]+$/', $user_info->email) ){
+		// 		$rtn->is_valid = false;
+		// 		$rtn->errors->email = array($this->lang()->get('error_message.invalid_email'));
+		// 	}
+		// }
+		// if( !isset($user_info->role) || !strlen($user_info->role) ){
+		// 	$rtn->is_valid = false;
+		// 	$rtn->errors->role = array($this->lang()->get('error_message.required_select'));
+		// }
+		// switch( $user_info->role ){
+		// 	case 'admin':
+		// 	case 'specialist':
+		// 	case 'member':
+		// 		break;
+		// 	default:
+		// 		$rtn->is_valid = false;
+		// 		$rtn->errors->role = array($this->lang()->get('error_message.invalid_role'));
+		// 		break;
+		// }
 		if( $rtn->is_valid ){
 			$rtn->message = 'OK';
 		}else{
@@ -4820,13 +4733,55 @@ class auth {
 
 
 	// --------------------------------------
+	// APIキー
+
+	/**
+	 * APIキーが有効か？
+	 */
+	public function is_valid_api_key( $api_key ){
+		$api_key_attribute = $this->get_api_key_attributes( $api_key );
+		if( $api_key_attribute === false ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * APIキーに与えられた属性情報を取得する
+	 */
+	public function get_api_key_attributes( $api_key ){
+
+		$api_key_initial10 = substr($api_key, 0, 10);
+
+		// config に定義されたAPIキーでログインを試みる
+		$api_keys = (array) $this->rencon->conf()->api_keys;
+		if( is_array($api_keys[$api_key_initial10] ?? null) || is_object($api_keys[$api_key_initial10] ?? null) ){
+			if( password_verify($api_key, $api_keys[$api_key_initial10]['key']) ){
+				return (object) $api_keys[$api_key_initial10];
+			}
+		}
+
+		// ユーザーディレクトリにセットされたユーザーで試みる
+		if( strlen($this->realpath_api_key_json ?? '') && is_file($this->realpath_api_key_json) ){
+			$api_keys = dataDotPhp::read_json($this->realpath_api_key_json);
+			if( is_object($api_keys->{$api_key_initial10} ?? null) ){
+				if( password_verify($api_key, $api_keys->{$api_key_initial10}->key) ){
+					return (object) $api_keys->{$api_key_initial10};
+				}
+			}
+		}
+		return false;
+	}
+
+
+	// --------------------------------------
 	// CSRFトークン
 
 	/**
 	 * CSRFトークンを取得する
 	 */
 	public function get_csrf_token(){
-		$CSRF_TOKEN = $this->req->get_session('ADMIN_USER_CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
@@ -4846,7 +4801,7 @@ class auth {
 	 * 新しいCSRFトークンを発行する
 	 */
 	private function create_csrf_token(){
-		$CSRF_TOKEN = $this->req->get_session('ADMIN_USER_CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN) ){
 			$CSRF_TOKEN = array();
 		}
@@ -4856,7 +4811,7 @@ class auth {
 			'hash' => $hash,
 			'created_at' => time(),
 		));
-		$this->req->set_session('ADMIN_USER_CSRF_TOKEN', $CSRF_TOKEN);
+		$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN);
 		return $hash;
 	}
 
@@ -4864,42 +4819,9 @@ class auth {
 	 * CSRFトークンの検証を行わない条件を調査
 	 */
 	private function is_csrf_token_required(){
-		$command = $this->px->get_px_command();
-		if( !is_array($command) || !count($command) || (count($command) == 1 && !strlen($command[0])) ){
-			// --------------------------------------
-			// プレビューリクエスト
-			// PXコマンドなしのリクエストでは、CSRFトークンを要求しない (POSTでも要求しない)
-			// NOTE: PXコマンドがないリクエストは、管理画面ではなくウェブサイト側の処理なので、cloverが制御するべきではない。 Paprika に委ねるべき。
+		if( strtoupper($_SERVER['REQUEST_METHOD'] ?? '') == 'GET' ){
+			// GETのリクエストでは、CSRFトークンを要求しない
 			return false;
-
-		}elseif( $command[0] == 'admin' ){
-			// --------------------------------------
-			// px2-clover 管理画面
-			$subCmd = (isset( $command[1] ) ? $command[1] : '');
-			switch($subCmd){
-				case '':
-				case 'logout':
-				case 'config':
-				case 'page_info':
-				case 'blog':
-				case 'sitemap':
-				case 'theme':
-				case 'edit_content':
-				case 'edit_theme_layout':
-				case 'publish':
-				case 'clearcache':
-				case 'modules':
-				case 'history':
-				case 'cce':
-					if( strtoupper($_SERVER['REQUEST_METHOD'] ?? '') == 'GET' ){
-						// 既知の特定の画面へのGETのリクエストでは、CSRFトークンを要求しない
-						return false;
-					}
-					break;
-			}
-		}else{
-			// --------------------------------------
-			// その他のPXコマンドではCSRFトークンが必要
 		}
 		return true;
 	}
@@ -4909,11 +4831,11 @@ class auth {
 	 */
 	public function is_valid_csrf_token_given(){
 
-		$CSRF_TOKEN = $this->req->get_param('ADMIN_USER_CSRF_TOKEN');
+		$CSRF_TOKEN = $this->req->get_param('CSRF_TOKEN');
 		if( !$CSRF_TOKEN ){
 			$headers = getallheaders();
 			foreach($headers as $header_name=>$header_val){
-				if( strtolower($header_name) == 'x-px2-clover-admin-csrf-token' ){
+				if( strtolower($header_name) == 'x-rencon-admin-csrf-token' ){
 					$CSRF_TOKEN = $header_val;
 					break;
 				}
@@ -4923,7 +4845,7 @@ class auth {
 			return false;
 		}
 
-		$CSRF_TOKEN_LIST = $this->req->get_session('ADMIN_USER_CSRF_TOKEN');
+		$CSRF_TOKEN_LIST = $this->req->get_session('CSRF_TOKEN');
 		if( !is_array($CSRF_TOKEN_LIST) ){
 			$CSRF_TOKEN_LIST = array();
 		}
@@ -4932,7 +4854,7 @@ class auth {
 				// 有効期限が切れていたら評価できない。
 				// 配列から削除する。
 				unset($CSRF_TOKEN_LIST[$idx]);
-				$this->req->set_session('ADMIN_USER_CSRF_TOKEN', $CSRF_TOKEN_LIST);
+				$this->req->set_session('CSRF_TOKEN', $CSRF_TOKEN_LIST);
 				continue;
 			}
 			if( $token['hash'] == $CSRF_TOKEN ){
@@ -4942,7 +4864,8 @@ class auth {
 
 		return false;
 	}
-}<?php
+}
+?><?php
 
 namespace app01;
 

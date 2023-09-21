@@ -146,7 +146,7 @@ class rencon {
 
 		// 例外ハンドラを設定する
 		set_exception_handler(function(\Throwable $exception) {
-			$datestr = date('Y-m-d H:i:s');
+			$datestr = date('c');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";
 			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
@@ -170,7 +170,7 @@ class rencon {
 
 		// エラーハンドラを設定する
 		set_error_handler(function($errno, $errstr, $errfile, $errline) {
-			$datestr = date('Y-m-d H:i:s');
+			$datestr = date('c');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){
@@ -2847,7 +2847,7 @@ class logger{
 			$remote_addr, // IPアドレス
 		);
 
-		dataDotPhp::write_a( $this->realpath_logs.'log-'.date('Y-m-d').'.csv.php', $this->rencon->fs()->mk_csv( array($log) ) );
+		dataDotPhp::write_a( $this->realpath_logs.'log-'.gmdate('Y-m-d').'Z.csv.php', $this->rencon->fs()->mk_csv( array($log) ) );
 		return;
 	}
 
@@ -2873,7 +2873,7 @@ class logger{
 		}
 
 		$log_datetime = date('c');
-		$log_date = date('Y-m-d');
+		$log_date = gmdate('Y-m-d').'Z';
 
 		$log = array(
 			$log_datetime, // 時刻

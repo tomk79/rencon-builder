@@ -25,6 +25,7 @@ composer require tomk79/rencon-builder
 - `$rencon->lock()`、`$rencon->is_locked()`、`$rencon->unlock()`、`$rencon->touch_lockfile()` を追加。
 - bin を公開した。
 - ユーザーディレクトリ名を `admin_users` から `users` に改名した。
+- ログと内部管理される時刻情報を ISO 8601 形式 に変更した。
 - その他、いくつかの細かい修正。
 
 ### tomk79/rencon-builder v0.2.0 (2023年8月29日)

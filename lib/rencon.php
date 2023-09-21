@@ -97,7 +97,7 @@ class rencon {
 
 		// 例外ハンドラを設定する
 		set_exception_handler(function(\Throwable $exception) {
-			$datestr = date('Y-m-d H:i:s');
+			$datestr = date('c');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			echo "Uncaught exception: ", $exception->getMessage(), "\n";
 			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
@@ -121,7 +121,7 @@ class rencon {
 
 		// エラーハンドラを設定する
 		set_error_handler(function($errno, $errstr, $errfile, $errline) {
-			$datestr = date('Y-m-d H:i:s');
+			$datestr = date('c');
 			$realpath_private_data_dir = $this->conf()->realpath_private_data_dir ?? null;
 			if( strlen($realpath_private_data_dir ?? '') && is_dir($realpath_private_data_dir) ){
 				if( !file_exists($realpath_private_data_dir.'/logs/') ){

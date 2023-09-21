@@ -960,7 +960,7 @@ class auth {
 	/**
 	 * Validation: ユーザー情報
 	 */
-	private function validate_user_info( $user_info ){
+	public function validate_user_info( $user_info ){
 		$rtn = (object) array(
 			'is_valid' => true,
 			'message' => null,

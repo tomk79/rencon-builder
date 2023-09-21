@@ -4536,6 +4536,266 @@ class auth {
 	}
 
 	/**
+	 * 現在のログインユーザー自身の情報を更新する
+	 *
+	 * @param array|object $new_profile 変更する新しいユーザー情報
+	 * @param string $login_password ログインしているユーザーの現在のパスワード
+	 */
+	public function update_login_user_info( $new_profile, $login_password ){
+		$new_profile = json_decode(json_encode($new_profile));
+		$login_user_id = $this->req->get_session($this->session_key_id);
+		if( !is_string($login_user_id) || !strlen($login_user_id) ){
+			// ログインしていない
+			return (object) array(
+				'result' => false,
+				'message' => 'Authentication failed.',
+				'errors' => (object) array(),
+			);
+		}
+
+		$allow_profile_keys = array(
+			'id',
+			'name',
+			'lang',
+			'pw',
+			'pw_retype',
+			'email',
+			// 'role', // 自分のロールは変更できない
+		);
+		foreach( $new_profile as $key=>$val ){
+			if( array_search($key, $allow_profile_keys) === false ){
+				unset($new_profile->{$key}); // 変更できないキーを削除する
+			}
+		}
+		if( !strlen($new_profile->pw || '') && !strlen($new_profile->pw_retype || '') ){
+			unset($new_profile->pw);
+			unset($new_profile->pw_retype);
+		}
+		$rtn = $this->update_user_info( $login_user_id, $new_profile, $login_password );
+
+		if( $rtn->result ){
+			// ログインユーザーの情報を更新
+			$new_login_user_id = $login_user_id;
+			if( isset($new_profile->id) && is_string($new_profile->id) ){
+				$new_login_user_id = $new_profile->id;
+			}
+			$this->req->set_session($this->session_key_id, $new_login_user_id);
+			if( isset($new_profile->pw) && is_string($new_profile->pw) && strlen($new_profile->pw) ){
+				$new_user_info = $this->get_user_info_full($new_login_user_id);
+				$this->req->set_session($this->session_key_pw, $new_user_info->pw);
+			}
+		}
+
+		return $rtn;
+	}
+
+	/**
+	 * 管理者ユーザーの情報を更新する
+	 *
+	 * @param string $target_user_id 変更対象のユーザーID
+	 * @param array|object $new_profile 変更する新しいユーザー情報
+	 * @param string $login_password ログインしているユーザーの現在のパスワード
+	 */
+	public function update_user_info( $target_user_id, $new_profile, $login_password ){
+		$new_profile = json_decode(json_encode($new_profile));
+		$result = (object) array(
+			'result' => true,
+			'message' => 'OK',
+			'errors' => (object) array(),
+		);
+
+		$current_user_info = $this->get_user_info_full( $this->req->get_session($this->session_key_id) );
+		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+			// 現在のパスワードを確認
+			return (object) array(
+				'result' => false,
+				'message' => 'Authentication Failed.',
+				'errors' => (object) array(
+					'current_pw' => array('現在のログインパスワードを正しく入力してください。'),
+				),
+			);
+		}
+
+		if( !is_string($target_user_id) || !strlen($target_user_id) ){
+			// 更新対象が未指定
+			return (object) array(
+				'result' => false,
+				'message' => 'Target not set.',
+				'errors' => (object) array(),
+			);
+		}
+
+		if( !$this->validate_user_id($target_user_id) ){
+			// 不正な形式のID
+			return (object) array(
+				'result' => false,
+				'message' => 'Invalid Login User ID.',
+				'errors' => (object) array(),
+			);
+		}
+
+		$user_info = $this->get_user_info_full( $target_user_id );
+		if( !is_object($user_info) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'Failed to get user information.',
+				'errors' => (object) array(),
+			);
+		}
+
+		if( (strlen($new_profile->pw ?? '') || strlen($new_profile->pw_retype ?? '')) && $new_profile->pw !== $new_profile->pw_retype ){
+			return (object) array(
+				'result' => false,
+				'message' => 'Password not matched.',
+				'errors' => (object) array(
+					'pw_retype' => array('パスワードが一致しません。'),
+				),
+			);
+		}
+
+		$profile_keys = array(
+			'id',
+			'name',
+			'lang',
+			'pw',
+			'email',
+			'role',
+		);
+		foreach( $profile_keys as $key ){
+			// 変更項目の整理
+			if( !property_exists($new_profile, $key) ){
+				continue;
+			}
+			$val = $new_profile->{$key} ?? null;
+			if( $key == 'pw' ){
+				if( !is_string($val) || !strlen($val) ){
+					continue;
+				}
+				$user_info->{$key} = $this->password_hash($val);
+				continue;
+			}
+
+			$user_info->{$key} = $val;
+		}
+
+		$user_info_validated = $this->validate_user_info($user_info);
+		if( !$user_info_validated->is_valid ){
+			// 不正な形式のユーザー情報
+			return (object) array(
+				'result' => false,
+				'message' => $user_info_validated->message,
+				'errors' => $user_info_validated->errors,
+			);
+		}
+
+
+		if( $target_user_id != $user_info->id && $this->user_data_exists($user_info->id) ){
+			// 既に存在します。
+			return (object) array(
+				'result' => false,
+				'message' => '新しいユーザーIDは既に存在します。',
+				'errors' => (object) array(
+					'id' => array('新しいユーザーIDは既に存在します。'),
+				),
+			);
+		}
+
+		// 新しいIDのためにファイル名を変更
+		$res_rename = $this->rename_user_data($target_user_id, $user_info->id);
+		if( !$res_rename ){
+			return (object) array(
+				'result' => false,
+				'message' => 'ユーザーIDの変更に失敗しました。',
+				'errors' => (object) array(),
+			);
+		}
+
+		if( !$this->write_user_data($user_info->id, $user_info) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'ユーザー情報の保存に失敗しました。',
+				'errors' => (object) array(),
+			);
+		}
+
+		$log_message = 'Admin user \''.$user_info->id.'\' info updated.';
+		if($target_user_id != $user_info->id){
+			$log_message .= '; ID changed \''.$target_user_id.'\' to \''.$user_info->id.'\'';
+		}
+		if(isset($new_profile->pw) && is_string($new_profile->pw) && strlen($new_profile->pw)){
+			$log_message .= '; Password changed';
+		}
+		$this->logger()->log($log_message);
+
+		return $result;
+	}
+
+
+	/**
+	 * 管理者ユーザーの情報を削除する
+	 *
+	 * @param string $target_user_id 削除対象のユーザーID
+	 * @param string $login_password ログインしているユーザーの現在のパスワード
+	 */
+	public function delete_user_info( $target_user_id, $login_password ){
+		$current_user_info = $this->get_user_info_full( $this->req->get_session($this->session_key_id) );
+		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+			// 現在のパスワードを確認
+			return (object) array(
+				'result' => false,
+				'message' => 'Authentication Failed.',
+				'errors' => (object) array(
+					'current_pw' => array('現在のログインパスワードを正しく入力してください。'),
+				),
+			);
+		}
+
+		$result = (object) array(
+			'result' => true,
+			'message' => 'OK',
+			'errors' => (object) array(),
+		);
+		if( !is_string($target_user_id) || !strlen($target_user_id) ){
+			// 削除対象が未指定
+			return (object) array(
+				'result' => false,
+				'message' => '削除対象を指定してください。',
+				'errors' => (object) array(),
+			);
+		}
+
+		if( !$this->validate_user_id($target_user_id) ){
+			// 不正な形式のID
+			return (object) array(
+				'result' => false,
+				'message' => 'ログインユーザーのIDが不正です。',
+				'errors' => (object) array(),
+			);
+		}
+
+		$user_info = $this->get_user_info_full( $target_user_id );
+		if( !is_object($user_info) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'ユーザー情報の取得に失敗しました。',
+				'errors' => (object) array(),
+			);
+		}
+
+		if( !$this->remove_user_data($user_info->id) ){
+			return (object) array(
+				'result' => false,
+				'message' => 'ユーザー情報の削除に失敗しました。',
+				'errors' => (object) array(),
+			);
+		}
+
+		return $result;
+	}
+
+
+
+	/**
 	 * Validation: ユーザーID
 	 */
 	private function validate_user_id( $user_id ){

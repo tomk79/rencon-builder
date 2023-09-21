@@ -194,7 +194,7 @@ class auth {
 		if( !$user_info ){
 			return false;
 		}
-		if( !is_string($user_pw) || !strlen($user_pw) || !password_verify($user_pw, $user_info->pw) || sha1($user_pw) != $user_info->pw ){
+		if( !is_string($user_pw) || !strlen($user_pw) || (!password_verify($user_pw, $user_info->pw) && sha1($user_pw) != $user_info->pw) ){
 			return false;
 		}
 		return true;

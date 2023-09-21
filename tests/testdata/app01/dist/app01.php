@@ -4032,6 +4032,27 @@ class auth {
 	}
 
 	/**
+	 * Validation: ユーザーのパスワードを検証する
+	 */
+	public function verify_user_password( $user_pw, $user_id = null ){
+		if( is_null($user_id) ){
+			$user_id = $this->req->get_session($this->session_key_id);
+		}
+		if( !strlen($user_id ?? '') ){
+			return false;
+		}
+
+		$user_info = $this->get_user_info_full( $user_id );
+		if( !$user_info ){
+			return false;
+		}
+		if( !is_string($user_pw) || !strlen($user_pw) || !password_verify($user_pw, $user_info->pw) || sha1($user_pw) != $user_info->pw ){
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * ログアウトして終了する
 	 */
 	public function logout(){
@@ -4370,10 +4391,9 @@ class auth {
 
 		$user_list = $this->get_user_list();
 		$new_profile = json_decode(json_encode($new_profile));
-		$current_user_info = $this->get_user_info_full( $this->req->get_session($this->session_key_id) );
 		if( count($user_list) ){
 			// NOTE: 始めてのユーザーを作成するときは、現在のパスワードを求めない。ログインしていることを前提にしない。
-			if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+			if( !$this->verify_user_password($login_password) ){
 				// 現在のパスワードを確認
 				return (object) array(
 					'result' => false,
@@ -4604,8 +4624,7 @@ class auth {
 			'errors' => (object) array(),
 		);
 
-		$current_user_info = $this->get_user_info_full( $this->req->get_session($this->session_key_id) );
-		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+		if( !$this->verify_user_password($login_password) ){
 			// 現在のパスワードを確認
 			return (object) array(
 				'result' => false,
@@ -4738,8 +4757,8 @@ class auth {
 	 * @param string $login_password ログインしているユーザーの現在のパスワード
 	 */
 	public function delete_user_info( $target_user_id, $login_password ){
-		$current_user_info = $this->get_user_info_full( $this->req->get_session($this->session_key_id) );
-		if( !is_string($login_password) || !strlen($login_password) || !password_verify($login_password, $current_user_info->pw) ){
+
+		if( !$this->verify_user_password($login_password) ){
 			// 現在のパスワードを確認
 			return (object) array(
 				'result' => false,

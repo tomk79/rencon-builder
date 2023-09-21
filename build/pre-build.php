@@ -27,6 +27,6 @@ $src .= '       );'."\n";
 $src .= '       return base64_decode($files[$className]);'."\n";
 $src .= '   }'."\n";
 $src .= '}'."\n";
-file_put_contents( __DIR__.'/../src/framework_files.php', $src );
+file_put_contents( __DIR__.'/../src_rencon_builder/framework_files.php', $src );
 
 exit();

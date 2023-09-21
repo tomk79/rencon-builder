@@ -52,7 +52,7 @@ class logger{
 		$log = array(
 			date('c'), // 時刻
 			getmypid(), // プロセスID
-			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			$this->rencon->req()->get_session('USER_ID'), // ログインユーザーID (未ログイン時は null)
 			$message, // ログメッセージ
 			$trace[0]['file'], // 呼び出したスクリプトファイル
 			$trace[0]['line'], // 呼び出した行番号
@@ -90,7 +90,7 @@ class logger{
 		$log = array(
 			$log_datetime, // 時刻
 			getmypid(), // プロセスID
-			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			$this->rencon->req()->get_session('USER_ID'), // ログインユーザーID (未ログイン時は null)
 			$message, // ログメッセージ
 			$trace[0]['file'], // 呼び出したスクリプトファイル
 			$trace[0]['line'], // 呼び出した行番号
@@ -101,7 +101,7 @@ class logger{
 		$log = array(
 			$log_datetime, // 時刻
 			getmypid(), // プロセスID
-			$this->rencon->req()->get_session('ADMIN_USER_ID'), // ログインユーザーID (未ログイン時は null)
+			$this->rencon->req()->get_session('USER_ID'), // ログインユーザーID (未ログイン時は null)
 			'Error: '.$message, // ログメッセージ
 			$trace[0]['file'], // 呼び出したスクリプトファイル
 			$trace[0]['line'], // 呼び出した行番号

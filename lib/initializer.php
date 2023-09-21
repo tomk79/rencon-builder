@@ -42,11 +42,11 @@ Deny from all
 			}
 
 			// 管理ユーザーデータ
-			if( !is_dir($this->realpath_private_data_dir.'admin_users/') ){
-				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir.'admin_users/');
+			if( !is_dir($this->realpath_private_data_dir.'users/') ){
+				$this->rencon->fs()->mkdir_r($this->realpath_private_data_dir.'users/');
 			}
-			if( !is_dir($this->realpath_private_data_dir.'admin_users/') || !count( $this->rencon->fs()->ls($this->realpath_private_data_dir.'admin_users/') ) ){
-				$this->initialize_admin_user_page();
+			if( !is_dir($this->realpath_private_data_dir.'users/') || !count( $this->rencon->fs()->ls($this->realpath_private_data_dir.'users/') ) ){
+				$this->initialize_user_page();
 				exit;
 			}
 		}
@@ -55,7 +55,7 @@ Deny from all
 	/**
 	 * 管理ユーザーデータを初期化する画面
 	 */
-	private function initialize_admin_user_page(){
+	private function initialize_user_page(){
 		$result = (object) array(
 			"result" => null,
 			"message" => null,
@@ -63,15 +63,15 @@ Deny from all
 		);
 		if( $this->rencon->req()->get_method() == 'post' ){
 			$user_info = array(
-				'name' => $this->rencon->req()->get_param('ADMIN_USER_NAME'),
-				'id' => $this->rencon->req()->get_param('ADMIN_USER_ID'),
-				'pw' => $this->rencon->req()->get_param('ADMIN_USER_PW'),
-				'pw_retype' => $this->rencon->req()->get_param('admin_user_pw_retype'),
-				'lang' => $this->rencon->req()->get_param('ADMIN_USER_LANG'),
-				'email' => $this->rencon->req()->get_param('admin_user_email'),
+				'name' => $this->rencon->req()->get_param('USER_NAME'),
+				'id' => $this->rencon->req()->get_param('USER_ID'),
+				'pw' => $this->rencon->req()->get_param('USER_PW'),
+				'pw_retype' => $this->rencon->req()->get_param('user_pw_retype'),
+				'lang' => $this->rencon->req()->get_param('USER_LANG'),
+				'email' => $this->rencon->req()->get_param('user_email'),
 				'role' => 'admin',
 			);
-			$result = $this->rencon->auth()->create_admin_user( $user_info, null ); // NOTE: 最初のユーザー作成時には、現在のパスワードを確認しない。
+			$result = $this->rencon->auth()->create_user( $user_info, null ); // NOTE: 最初のユーザー作成時には、現在のパスワードを確認しない。
 			if( $result->result ){
 				header('Location:'.'?a=');
 				exit;
@@ -103,7 +103,7 @@ Deny from all
 <table>
 	<tr>
 		<th>Name:</th>
-		<td><input type="text" name="ADMIN_USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_NAME') ?? '') ?>" />
+		<td><input type="text" name="USER_NAME" value="<?= htmlspecialchars($this->rencon->req()->get_param('USER_NAME') ?? '') ?>" />
 			<?php if( strlen( $result->errors->name[0] ?? '' ) ){ ?>
 			<p><?= htmlspecialchars( $result->errors->name[0] ?? '' ) ?></p>
 			<?php } ?>
@@ -111,7 +111,7 @@ Deny from all
 	</tr>
 	<tr>
 		<th>ID:</th>
-		<td><input type="text" name="ADMIN_USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('ADMIN_USER_ID') ?? '') ?>" />
+		<td><input type="text" name="USER_ID" value="<?= htmlspecialchars($this->rencon->req()->get_param('USER_ID') ?? '') ?>" />
 			<?php if( strlen( $result->errors->id[0] ?? '' ) ){ ?>
 			<p><?= htmlspecialchars( $result->errors->id[0] ?? '' ) ?></p>
 			<?php } ?>
@@ -119,7 +119,7 @@ Deny from all
 	</tr>
 	<tr>
 		<th>Password:</th>
-		<td><input type="password" name="ADMIN_USER_PW" value="" />
+		<td><input type="password" name="USER_PW" value="" />
 			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
 			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
 			<?php } ?>
@@ -127,7 +127,7 @@ Deny from all
 	</tr>
 	<tr>
 		<th>Password (retype):</th>
-		<td><input type="password" name="admin_user_pw_retype" value="" />
+		<td><input type="password" name="user_pw_retype" value="" />
 			<?php if( strlen( $result->errors->pw[0] ?? '' ) ){ ?>
 			<p><?= htmlspecialchars( $result->errors->pw[0] ?? '' ) ?></p>
 			<?php } ?>

@@ -16,7 +16,7 @@ composer require tomk79/rencon-builder
 
 ## 更新履歴 - Change Log
 
-### tomk79/rencon-builder v0.3.0 (リリース日未定)
+### tomk79/rencon-builder v0.3.0 (2023年11月13日)
 
 - アカウントロック機能を追加した。
 - APIのルーティング機能と、APIキーの管理機能を追加した。

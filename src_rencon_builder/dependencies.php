@@ -61,8 +61,12 @@ class dependencies {
 
 		if( property_exists( $json->autoload, 'psr-4' ) ){
 			foreach( $json->autoload->{'psr-4'} as $namespace_prefix => $ary_dirs ){
-				foreach( $ary_dirs as $dirname ){
-					$this->require_php_in_directory( $dirname );
+				if( is_string($ary_dirs ?? null) ){
+					$this->require_php_in_directory( $ary_dirs );
+				}elseif( is_array($ary_dirs ?? null) ){
+					foreach( $ary_dirs as $dirname ){
+						$this->require_php_in_directory( $dirname );
+					}
 				}
 			}
 		}

@@ -16,6 +16,10 @@ composer require tomk79/rencon-builder
 
 ## 更新履歴 - Change Log
 
+### tomk79/rencon-builder v0.3.1 (リリース未定)
+
+- 依存パッケージの読み込みに関する不具合を修正。
+
 ### tomk79/rencon-builder v0.3.0 (2023年11月13日)
 
 - アカウントロック機能を追加した。

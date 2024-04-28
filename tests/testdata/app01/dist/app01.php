@@ -95,11 +95,13 @@ class rencon {
 
 	private $route;
 	private $api_route;
+	private $console_route;
 	private $route_params;
 
 	private $routing_method = 'web';
 
 	public function __construct( $conf ){
+		chdir(__DIR__);
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->conf = new conf($this, $conf);
@@ -257,12 +259,27 @@ var_dump( $_REQUEST );
 
 		);
 
+		$this->console_route = array(
+'console.sample' => (object) array(
+	"title" => NULL,
+	"page" => 'app01\\console\\sample::start',
+	"allow_methods" => NULL,
+),
+'console.sample.{routeParam1?}' => (object) array(
+	"title" => NULL,
+	"page" => 'app01\\console\\sample::start',
+	"allow_methods" => NULL,
+),
+
+		);
+
 		$middleware = array (
   0 => 'app01\\middleware\\sample::middleware',
 );
 
 		$action = $this->req->get_param('a') ?? '';
 		$api_action = $this->req->get_param('api') ?? '';
+		$console_action = $this->req->get_cli_param(-1) ?? '';
 		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
@@ -285,6 +302,8 @@ var_dump( $_REQUEST );
 			$this->routing_method = 'resource';
 		}elseif( !strlen($action ?? '') && strlen($api_action ?? '') ){
 			$this->routing_method = 'api';
+		}elseif( $this->req->is_cmd() ){
+			$this->routing_method = 'console';
 		}
 
 		// --------------------------------------
@@ -292,7 +311,6 @@ var_dump( $_REQUEST );
 		if( $this->routing_method == 'resource' ){
 			$this->resources->echo_resource( $resource );
 			exit();
-
 		}
 
 		// --------------------------------------
@@ -348,6 +366,8 @@ var_dump( $_REQUEST );
 		if( $this->routing_method == 'api' ){
 			header("Content-type: text/json");
 			$controller = $this->routing( $api_action, $this->api_route );
+		}elseif( $this->routing_method == 'console' ){
+			$controller = $this->routing( $console_action, $this->console_route );
 		}
 		if( $controller ){
 
@@ -361,8 +381,9 @@ var_dump( $_REQUEST );
 					array_push($allow_methods, strtolower($method));
 				}
 			}
-
-			if( array_search( $this->req->get_method(), $allow_methods ) === false ){
+			if( $this->routing_method == 'console' ){
+				$allow_methods = array();
+			}elseif( array_search( $this->req->get_method(), $allow_methods ) === false ){
 				$this->method_not_allowed();
 				exit();
 			}
@@ -385,6 +406,13 @@ var_dump( $_REQUEST );
 				$stdout = ob_get_clean();
 
 				echo json_encode($content);
+
+			}elseif( $this->routing_method == 'console' ){
+				ob_start();
+				$content = call_user_func( $controller->page, $this );
+				$stdout = ob_get_clean();
+
+				echo $content.$stdout;
 			}
 
 		}else{
@@ -5191,6 +5219,17 @@ class api_test {
 		$rtn['routeParam1'] = $rencon->get_route_param('routeParam1');
 		return $rtn;
 	}
+}
+?><?php
+namespace app01\console;
+class sample {
+    static public function start( $rencon ){
+        echo '-------------'."\n";
+        echo 'Console Sample'."\n";
+        echo 'pwd: '.realpath('.')."\n";
+		echo 'routeParam1: '.$rencon->get_route_param('routeParam1')."\n";
+        exit;
+    }
 }
 ?><?php
 

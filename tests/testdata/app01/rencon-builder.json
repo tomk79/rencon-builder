@@ -45,6 +45,14 @@
             "page": "app01\\api_test::test_route_param"
         }
     },
+    "console_route": {
+        "console.sample": {
+            "page": "app01\\console\\sample::start"
+        },
+        "console.sample.{routeParam1?}": {
+            "page": "app01\\console\\sample::start"
+        }
+    },
     "theme": "app/theme/theme.php",
     "config_template": "app/config.php"
 }

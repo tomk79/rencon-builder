@@ -46,11 +46,13 @@ class rencon {
 
 	private $route;
 	private $api_route;
+	private $console_route;
 	private $route_params;
 
 	private $routing_method = 'web';
 
 	public function __construct( $conf ){
+		chdir(__DIR__);
 		$this->fs = new filesystem();
 		$this->req = new request();
 		$this->conf = new conf($this, $conf);
@@ -153,10 +155,15 @@ class rencon {
 /* router:api */
 		);
 
+		$this->console_route = array(
+/* router:console */
+		);
+
 		$middleware = array(/* middleware */);
 
 		$action = $this->req->get_param('a') ?? '';
 		$api_action = $this->req->get_param('api') ?? '';
+		$console_action = $this->req->get_cli_param(-1) ?? '';
 		$resource = $this->req->get_param('res') ?? null;
 		$controller = null;
 		$app_info = array(
@@ -179,6 +186,8 @@ class rencon {
 			$this->routing_method = 'resource';
 		}elseif( !strlen($action ?? '') && strlen($api_action ?? '') ){
 			$this->routing_method = 'api';
+		}elseif( $this->req->is_cmd() ){
+			$this->routing_method = 'console';
 		}
 
 		// --------------------------------------
@@ -186,7 +195,6 @@ class rencon {
 		if( $this->routing_method == 'resource' ){
 			$this->resources->echo_resource( $resource );
 			exit();
-
 		}
 
 		// --------------------------------------
@@ -242,6 +250,8 @@ class rencon {
 		if( $this->routing_method == 'api' ){
 			header("Content-type: text/json");
 			$controller = $this->routing( $api_action, $this->api_route );
+		}elseif( $this->routing_method == 'console' ){
+			$controller = $this->routing( $console_action, $this->console_route );
 		}
 		if( $controller ){
 
@@ -255,8 +265,9 @@ class rencon {
 					array_push($allow_methods, strtolower($method));
 				}
 			}
-
-			if( array_search( $this->req->get_method(), $allow_methods ) === false ){
+			if( $this->routing_method == 'console' ){
+				$allow_methods = array();
+			}elseif( array_search( $this->req->get_method(), $allow_methods ) === false ){
 				$this->method_not_allowed();
 				exit();
 			}
@@ -279,6 +290,13 @@ class rencon {
 				$stdout = ob_get_clean();
 
 				echo json_encode($content);
+
+			}elseif( $this->routing_method == 'console' ){
+				ob_start();
+				$content = call_user_func( $controller->page, $this );
+				$stdout = ob_get_clean();
+
+				echo $content.$stdout;
 			}
 
 		}else{

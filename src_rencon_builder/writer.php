@@ -112,10 +112,11 @@ class writer {
 		$src_route = (object) array(
 			'route' => '',
 			'api_route' => '',
+			'console_route' => '',
 		);
 		$src_route_login = '';
 		$src_route_logout = '';
-		foreach( array('route', 'api_route') as $router_division ){
+		foreach( array('route', 'api_route', 'console_route') as $router_division ){
 			if( $this->renconBuilderJson->{$router_division} ){
 				foreach( $this->renconBuilderJson->{$router_division} as $route => $func_name ){
 					$src_route->{$router_division} .= ''.var_export($route, true).' => (object) array('."\n";
@@ -206,6 +207,7 @@ class writer {
 		$framework = str_replace('/*-- config --*/', $src_config_template, $framework);
 		$framework = str_replace('/* router:route */', $src_route->route, $framework);
 		$framework = str_replace('/* router:api */', $src_route->api_route, $framework);
+		$framework = str_replace('/* router:console */', $src_route->console_route, $framework);
 		$framework = str_replace('array(/* middleware */)', $src_middleware, $framework);
 		$framework = str_replace('/* theme template */', $src_template, $framework);
 		$rtn .= $framework;

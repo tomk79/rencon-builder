@@ -16,9 +16,10 @@ composer require tomk79/rencon-builder
 
 ## 更新履歴 - Change Log
 
-### tomk79/rencon-builder v0.3.1 (リリース未定)
+### tomk79/rencon-builder v0.4.0 (リリース未定)
 
 - 依存パッケージの読み込みに関する不具合を修正。
+- コマンドラインからの実行に対応する console ルート機能を追加。
 
 ### tomk79/rencon-builder v0.3.0 (2023年11月13日)
 

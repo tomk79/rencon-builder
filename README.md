@@ -16,7 +16,7 @@ composer require tomk79/rencon-builder
 
 ## 更新履歴 - Change Log
 
-### tomk79/rencon-builder v0.4.1 (リリース日未定)
+### tomk79/rencon-builder v0.4.1 (2025年10月22日)
 
 - 初期化時に新しいユーザーを作成できない不具合を修正。
 

@@ -4,7 +4,7 @@ namespace tomk79\renconBuilder;
 class main {
 
 	/** version number */
-	private $version = '0.4.0';
+	private $version = '0.4.1';
 
 	/** $utils */
 	private $utils;

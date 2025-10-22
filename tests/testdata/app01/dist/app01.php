@@ -3065,6 +3065,7 @@ Deny from all
 	</tr>
 </table>
 <p><button type="submit">Create User</button></p>
+<input type="hidden" name="USER_LANG" value="ja" />
 <input type="hidden" name="a" value="<?= htmlspecialchars($this->rencon->req()->get_param('a') ?? '') ?>" />
 			</form>
 		</div>
